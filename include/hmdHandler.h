@@ -91,7 +91,7 @@ public:
 
 	bool checkControllers = false;
 	bool checkTrackers = false;
-	static const uint32_t trackerNum = 3;
+	static const uint32_t trackerNum = 5;
 	char serialNumber[trackerNum][15];
 	bool pubPose = false;
 
@@ -106,6 +106,7 @@ public:
 	_FLOAT map2array(Mat eigen);
 	Mat map2eigen(float array[][4]);
 	Mat coordinate_z(Mat array);
+	Mat coordinate_robot(Mat array);
 	Mat coordinate(Mat array);
 	VR::matrix_3_4 makeTrackingmsg(_FLOAT array);
 
@@ -116,8 +117,8 @@ public:
 	Mat LEFTCONTROLLER_curEig;
 	Mat RIGHTCONTROLLER_curEig;
 	Mat TRACKER_curEig[trackerNum];
-	_FLOAT HMD_LEFTCONTROLLER;
-	_FLOAT HMD_RIGHTCONTROLLER;
+	_FLOAT LEFTCONTROLLER;
+	_FLOAT RIGHTCONTROLLER;
 	_FLOAT HMD_TRACKER[trackerNum];
 	Mat HMD_worldEigInv;
 

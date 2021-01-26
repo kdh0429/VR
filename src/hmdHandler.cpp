@@ -43,7 +43,7 @@ HMD::HMD(int arc, char* arv[])
     
     this->argc_arg = arc;
     this->argv_arg = arv;
-    checkControllers = true;
+    checkControllers = false;
     checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
@@ -1237,7 +1237,7 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-    ros::Rate rate(1000);
+    ros::Rate rate(5);
     while (ros::ok())
     {
         bQuit = HandleInput();
@@ -1761,7 +1761,6 @@ void HMD::checkConnection() {
         int HMD_count = 0;
         int controller_count = 0;
         int tracker_count = 0;
-
         for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){;
             vr::ETrackedDeviceClass trackedStatus = VRSystem->GetTrackedDeviceClass(i);
             switch (int(trackedStatus)) {
@@ -1895,6 +1894,23 @@ Mat HMD::coordinate_z(Mat array){
     return  x_r_array;
 }
 
+Mat HMD::coordinate_robot(Mat array){
+
+    Mat local_coordinate_rotation;
+
+    local_coordinate_rotation << 0, -1, 0, 0,
+                0, 0, 1, 0,
+                -1, 0, 0, 0,
+                0, 0, 0, 1;
+    Mat vr_to_robot;
+    vr_to_robot << 0, 0, -1, 0,
+                -1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 0, 1;
+
+    return  vr_to_robot* array* local_coordinate_rotation;
+}
+
 Mat HMD::coordinate(Mat array) {
     Mat y_r;
     Mat x_r;
@@ -1928,25 +1944,25 @@ void HMD::rosPublish() {
     // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
 
         HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
-        HMD_world = map2array(refMatInv * HMD_curEig);
-        HMD_world_coord_change = map2array(coordinate(refMatInv * HMD_curEig));
-        HMD_worldEigInv = map2eigen(HMD_world).inverse();
-    if (checkControllers) {
-            LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-            RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-            HMD_LEFTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * LEFTCONTROLLER_curEig));
-            HMD_RIGHTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * RIGHTCONTROLLER_curEig));
-            for (int i=0; i<trackerNum; i++)
-            {
-                TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
-                HMD_TRACKER[i] = map2array(coordinate_z(HMD_curEig.inverse() * TRACKER_curEig[i]));
-            }
+    if (checkControllers) 
+    {
+        LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        LEFTCONTROLLER = map2array(coordinate_robot(LEFTCONTROLLER_curEig));
+        RIGHTCONTROLLER = map2array(coordinate_robot(RIGHTCONTROLLER_curEig));
+    }
+    if(checkTrackers){
+        for (int i=0; i<trackerNum; i++)
+        {
+            TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
+            HMD_TRACKER[i] = map2array(coordinate_robot(TRACKER_curEig[i]));
+        }
     }
     if (pubPose) {
-        hmd_pub.publish(makeTrackingmsg(HMD_world_coord_change));
+        hmd_pub.publish(makeTrackingmsg(map2array(coordinate_robot(HMD_curEig))));
         if (checkControllers) {
-            leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
-            rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
+            leftCon_pub.publish(makeTrackingmsg(LEFTCONTROLLER));
+            rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
         }
         if (checkTrackers){
             for (int i=0; i<trackerNum; i++)
@@ -1959,6 +1975,10 @@ void HMD::rosPublish() {
 
                 if (std::string(serialNumber[i]) == "LHR-7330E069")
                     tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                if (std::string(serialNumber[i]) == "LHR-8C0A4142")
+                    tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
+                    tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
             }
         }
     }
