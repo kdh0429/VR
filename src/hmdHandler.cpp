@@ -1237,7 +1237,7 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-    ros::Rate rate(1);
+    ros::Rate rate(1000);
     while (ros::ok())
     {
         bQuit = HandleInput();
@@ -1775,19 +1775,21 @@ void HMD::checkConnection() {
                 std::cout << "controller:   " << i << std::endl;
                 vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
                 if (controllerRole == 1) {
-                    std::cout << "controller:   " << controllerRole << "  Role: Left controller identified " << std::endl;
+                    std::cout << "Left controller identified! Left controller idx: " << i << std::endl;
                     this->LEFT_CONTROLLER_INDEX = i;
                 }
                 else if (controllerRole == 2) {
-                    std::cout << "controller:   " << controllerRole << "  Role: Right controller identified " << std::endl;
+                    std::cout << "Right controller identified! Right controller idx: " << i << std::endl;
                     this->RIGHT_CONTROLLER_INDEX = i;
                 }
                 controller_count += 1;
                 continue;
             }
             case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{
-                std::cout << "Tracker:   " << i << " identified " << std::endl;
+                std::cout << "Tracker " << tracker_count <<" identified! Idx is " << i << std::endl;
                 vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
+                vr::VRSystem()->GetStringTrackedDeviceProperty(i, vr::Prop_SerialNumber_String, serialNumber[tracker_count], sizeof(serialNumber));
+                printf("Serial Number = %s \n", serialNumber[tracker_count]);
                 this->TRACKER_INDEX[tracker_count] = i;
                 tracker_count += 1;
                 continue;
@@ -1945,9 +1947,18 @@ void HMD::rosPublish() {
         if (checkControllers) {
             leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
             rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
+        }
+        if (checkTrackers){
             for (int i=0; i<trackerNum; i++)
             {
-                tracker_pub[i].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                if (std::string(serialNumber[i]) == "LHR-B979AA9E")
+                    tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
+
+                if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
+                    tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
+
+                if (std::string(serialNumber[i]) == "LHR-7330E069")
+                    tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
             }
         }
     }

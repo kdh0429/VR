@@ -91,7 +91,8 @@ public:
 
 	bool checkControllers = false;
 	bool checkTrackers = false;
-	static const uint32_t trackerNum = 2;
+	static const uint32_t trackerNum = 3;
+	char serialNumber[trackerNum][15];
 	bool pubPose = false;
 
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum];
