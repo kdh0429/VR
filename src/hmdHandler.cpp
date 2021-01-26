@@ -1237,7 +1237,7 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-    ros::Rate rate(5);
+    ros::Rate rate(1000);
     while (ros::ok())
     {
         bQuit = HandleInput();
