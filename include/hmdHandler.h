@@ -1,6 +1,5 @@
 #include "render.h"
 
-
 #ifndef hmdHandler_h
 #define hmdHandler_h
 
@@ -90,8 +89,12 @@ public:
 	int argc_arg;
 	char** argv_arg;
 
+	bool checkControllers = false;
+	bool checkTrackers = false;
+	static const uint32_t trackerNum = 2;
+	bool pubPose = false;
 
-	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_1_pub;
+	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum];
 
 	//vr is  right-handed system
    // +y is up
@@ -111,16 +114,11 @@ public:
 	_FLOAT HMD_world_coord_change;
 	Mat LEFTCONTROLLER_curEig;
 	Mat RIGHTCONTROLLER_curEig;
-	Mat TRACKER_1_curEig;
+	Mat TRACKER_curEig[trackerNum];
 	_FLOAT HMD_LEFTCONTROLLER;
 	_FLOAT HMD_RIGHTCONTROLLER;
-	_FLOAT HMD_TRACKER1;
+	_FLOAT HMD_TRACKER[trackerNum];
 	Mat HMD_worldEigInv;
-
-	bool checkControllers = false;
-	bool checkTrackers = false;
-	int trackerNum = 1;
-	bool pubPose = false;
 
 /* streaming members */
 private:
@@ -160,7 +158,7 @@ public:
 	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
 	Matrix4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount];
 
-	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX, TRACKER_1_INDEX;
+	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX, TRACKER_INDEX[trackerNum];
 	vr::EVRInitError eError;
 	vr::IVRSystem* VRSystem;
 	vr::COpenVRContext vrContext;

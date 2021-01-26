@@ -1,4 +1,4 @@
-    #include "hmdHandler.h"
+#include "hmdHandler.h"
 
 void ThreadSleep(unsigned long nMilliseconds)
 {
@@ -45,7 +45,6 @@ HMD::HMD(int arc, char* arv[])
     this->argv_arg = arv;
     checkControllers = true;
     checkTrackers = true;
-    trackerNum = 1;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -1085,7 +1084,11 @@ void HMD::init() {
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
-    tracker_1_pub = node.advertise<VR::matrix_3_4>("TRACKER1", 1000);
+    for (int i=0; i<trackerNum; i++)
+    {
+        std::string topic_name = "TRACKER" + std::to_string(i);
+        tracker_pub[i] = node.advertise<VR::matrix_3_4>(topic_name, 1000);
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
@@ -1785,7 +1788,7 @@ void HMD::checkConnection() {
             case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{
                 std::cout << "Tracker:   " << i << " identified " << std::endl;
                 vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
-                this->TRACKER_1_INDEX = i;
+                this->TRACKER_INDEX[tracker_count] = i;
                 tracker_count += 1;
                 continue;
             }
@@ -1815,17 +1818,14 @@ void HMD::checkConnection() {
     if (!checkControllers && !checkTrackers)
     {
         std::cout << "HMD is identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl;
         std::cout << "All Specified Connection Identified.. Start VR system.." << std::endl;
     }
     else if(checkControllers && !checkTrackers) {
         std::cout << "One HMD and Two controllers are identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl << "LEFT CONTROLLER:  " << LEFT_CONTROLLER_INDEX << std::endl << "RIGHT CONTROLLER:  " << RIGHT_CONTROLLER_INDEX << std::endl;
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
     else if(!checkControllers && checkTrackers) {
         std::cout << "One HMD and " << trackerNum << " trackers are identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl << "Tracker:  " << TRACKER_1_INDEX << std::endl;
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
     else {
@@ -1932,17 +1932,23 @@ void HMD::rosPublish() {
     if (checkControllers) {
             LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
             RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-            TRACKER_1_curEig = map2eigen(m_rTrackedDevicePose[TRACKER_1_INDEX].mDeviceToAbsoluteTracking.m);
             HMD_LEFTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * LEFTCONTROLLER_curEig));
             HMD_RIGHTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * RIGHTCONTROLLER_curEig));
-            HMD_TRACKER1 = map2array(coordinate_z(HMD_curEig.inverse() * TRACKER_1_curEig));
+            for (int i=0; i<trackerNum; i++)
+            {
+                TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
+                HMD_TRACKER[i] = map2array(coordinate_z(HMD_curEig.inverse() * TRACKER_curEig[i]));
+            }
     }
     if (pubPose) {
         hmd_pub.publish(makeTrackingmsg(HMD_world_coord_change));
         if (checkControllers) {
             leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
             rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
-            tracker_1_pub.publish(makeTrackingmsg(HMD_TRACKER1));
+            for (int i=0; i<trackerNum; i++)
+            {
+                tracker_pub[i].publish(makeTrackingmsg(HMD_TRACKER[i]));
+            }
         }
     }
 }
