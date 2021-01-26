@@ -91,7 +91,7 @@ public:
 	char** argv_arg;
 
 
-	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub;
+	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_1_pub;
 
 	//vr is  right-handed system
    // +y is up
@@ -111,11 +111,15 @@ public:
 	_FLOAT HMD_world_coord_change;
 	Mat LEFTCONTROLLER_curEig;
 	Mat RIGHTCONTROLLER_curEig;
+	Mat TRACKER_1_curEig;
 	_FLOAT HMD_LEFTCONTROLLER;
 	_FLOAT HMD_RIGHTCONTROLLER;
+	_FLOAT HMD_TRACKER1;
 	Mat HMD_worldEigInv;
 
 	bool checkControllers = false;
+	bool checkTrackers = false;
+	int trackerNum = 1;
 	bool pubPose = false;
 
 /* streaming members */
@@ -156,7 +160,7 @@ public:
 	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
 	Matrix4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount];
 
-	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX;
+	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX, TRACKER_1_INDEX;
 	vr::EVRInitError eError;
 	vr::IVRSystem* VRSystem;
 	vr::COpenVRContext vrContext;
@@ -262,15 +266,15 @@ public: // OpenGL book keeping
 	float m_fNearClip;
 	float m_fFarClip;
 
-	GLuint m_Texture[6];
+	GLuint m_Texture[7];
 	
 
-	unsigned int m_uiVertcount[6];
+	unsigned int m_uiVertcount[7];
 	
 
-	GLuint m_glSceneVertBuffer[6];
+	GLuint m_glSceneVertBuffer[7];
 
-	GLuint m_unSceneVAO[6];
+	GLuint m_unSceneVAO[7];
 
 
 

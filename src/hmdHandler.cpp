@@ -43,8 +43,10 @@ HMD::HMD(int arc, char* arv[])
     
     this->argc_arg = arc;
     this->argv_arg = arv;
-    checkControllers = false;
-    pubPose = false;
+    checkControllers = true;
+    checkTrackers = true;
+    trackerNum = 1;
+    pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
 
@@ -248,7 +250,6 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
 
         glBindTexture(GL_TEXTURE_2D, 0);
 
-
     }
 
 
@@ -270,9 +271,27 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     cv::imshow("RIGHT Right face", hmdPtr->RightcubeRight);
     cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
+    //cv::imshow("rviz", hmdPtr->RvizScreen);
     cv::waitKey(1);
 
 }
+void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
+{
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+        cv_ptr = cv_bridge::toCvCopy(rvizImg, sensor_msgs::image_encodings::RGBA8);
+        std::cout << "hi" << std::endl;
+        hmdPtr->RvizScreen = cv_ptr->image;
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+}
+
+
 
 /* Shader Compiler  */
 GLuint HMD::CompileGLShader(const char* pchShaderName, const char* pchVertexShader, const char* pchFragmentShader)
@@ -559,6 +578,14 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
         AddCubeVertex(E.x, E.y, E.z, 0, 0, vertdata);
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
     }
+    else if (flag == 4) {
+        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata); //Right
+        AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
+        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        AddCubeVertex(G.x, G.y, G.z, 0, 0, vertdata);
+        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata);
+    }
     else if (flag == 5) {
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata); //Left
         AddCubeVertex(E.x, E.y, E.z, 1, 1, vertdata);
@@ -567,31 +594,24 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
         AddCubeVertex(D.x, D.y, D.z, 0, 0, vertdata);
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
     }
-    else {
-        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata); //Right
-        AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(G.x, G.y, G.z, 0, 0, vertdata);
-        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata);
-    }
 }
 
 void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
 {
     // Matrix4 mat( outermat.data() );
-
-    Vector4 A = mat * Vector4(-0.25, 0.0, -0.25, 1);
-    Vector4 B = mat * Vector4(0.25, 0.0, -0.25, 1);
-    Vector4 C = mat * Vector4(0.25, 1.0, -0.25, 1);
-    Vector4 D = mat * Vector4(-0.25, 1.0, -0.25, 1);
-
-    AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata); //Back
-    AddCubeVertex(A.x, A.y, A.z, 1, 1, vertdata);
-    AddCubeVertex(D.x, D.y, D.z, 1, 0, vertdata);
-    AddCubeVertex(D.x, D.y, D.z, 1, 0, vertdata);
-    AddCubeVertex(C.x, C.y, C.z, 0, 0, vertdata);
-    AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata);
+    //Matrix4 poseHMD = GetHMDMatrixPoseEye(vr::Eye_Left);
+    //Matrix4 staticMat = poseHMD.invertEuclidean() * mat;
+    Vector4 I = mat * Vector4(-0.1, 0.1, -0.25, 1);
+    Vector4 J = mat * Vector4(0.1, 0.1, -0.25, 1);
+    Vector4 K = mat * Vector4(0.1, 0.3, -0.25, 1);
+    Vector4 L = mat * Vector4(-0.1, 0.3, -0.25, 1);
+ 
+    AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata); //Back
+    AddCubeVertex(I.x, I.y, I.z, 1, 1, vertdata);
+    AddCubeVertex(L.x, L.y, L.z, 1, 0, vertdata);
+    AddCubeVertex(L.x, L.y, L.z, 1, 0, vertdata);
+    AddCubeVertex(K.x, K.y, K.z, 0, 0, vertdata);
+    AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata);
 }
 
 
@@ -601,7 +621,7 @@ void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
 void HMD::SetupScene()
 {
     if (!VRSystem) {
-        std::cout << "Setupe scene process failed.. program exit" << std::endl;
+        std::cout << "Setup scene process failed.. program exit" << std::endl;
         return;
     }
 
@@ -1065,6 +1085,7 @@ void HMD::init() {
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
+    tracker_1_pub = node.advertise<VR::matrix_3_4>("TRACKER1", 1000);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
@@ -1181,7 +1202,9 @@ void HMD::init() {
     checkConnection();
 
     ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>("/ricoh_h264_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
-    rviz_sub = node.subscribe<std_msgs::UInt8MultiArray>("/rviz_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
+
+    image_transport::ImageTransport it(node);
+    image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
 
     vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str());
 
@@ -1211,16 +1234,18 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-
+    ros::Rate rate(1);
     while (ros::ok())
     {
         bQuit = HandleInput();
         RenderFrame();
+        rosPublish();
 
         ros::spinOnce();
+        rate.sleep();
     }
 
-    SDL_StopTextInput();
+   SDL_StopTextInput();
 }
 
 void HMD::RenderFrame()
@@ -1427,12 +1452,11 @@ Matrix4 HMD::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
     
     if (nEye == vr::Eye_Left)
     {
-        
-        matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft  * m_mat4HMDPose;
+        matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
     }
     else if (nEye == vr::Eye_Right)
     {
-        matMVP = m_mat4ProjectionRight * m_mat4eyePosRight  * m_mat4HMDPose;
+        matMVP = m_mat4ProjectionRight * m_mat4eyePosRight * m_mat4HMDPose;
     }
 
     return matMVP;
@@ -1733,52 +1757,80 @@ void HMD::checkConnection() {
     while (true) {
         int HMD_count = 0;
         int controller_count = 0;
+        int tracker_count = 0;
 
         for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){;
             vr::ETrackedDeviceClass trackedStatus = VRSystem->GetTrackedDeviceClass(i);
             switch (int(trackedStatus)) {
             case 0:  continue;
-            case 1:
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_HMD:{
                 this->HMD_INDEX = i;
                 HMD_count += 1;
                 continue;
-            case 2: {
+            }
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_Controller: {
                 std::cout << "controller:   " << i << std::endl;
                 vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
                 if (controllerRole == 1) {
-                    std::cout << "controller:   " << i << "  Role: Left controller identified " << controllerRole << std::endl;
+                    std::cout << "controller:   " << controllerRole << "  Role: Left controller identified " << std::endl;
                     this->LEFT_CONTROLLER_INDEX = i;
                 }
                 else if (controllerRole == 2) {
-                    std::cout << "controller:   " << i << "  Role: Right controller identified " << controllerRole << std::endl;
+                    std::cout << "controller:   " << controllerRole << "  Role: Right controller identified " << std::endl;
                     this->RIGHT_CONTROLLER_INDEX = i;
                 }
                 controller_count += 1;
                 continue;
             }
-            case 3:  continue;
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{
+                std::cout << "Tracker:   " << i << " identified " << std::endl;
+                vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
+                this->TRACKER_1_INDEX = i;
+                tracker_count += 1;
+                continue;
+            }
             case 4:  continue;
             case 5:  continue;
             }
         }
 
-        if (checkControllers && (HMD_count == 1 && controller_count == 2)) {
+        // Only use HMD
+        if (!checkControllers && !checkTrackers && HMD_count == 1) {
             break;
         }
-        if (!checkControllers && HMD_count == 1) {
+        // Use HMD+controllers
+        if (checkControllers && !checkTrackers && (HMD_count == 1 && controller_count == 2)) {
+            break;
+        }
+        // Use HMD+trackers
+        if (!checkControllers && checkTrackers && (HMD_count == 1 && tracker_count == trackerNum)) {
+            break;
+        }
+        // Use HMD++controllers+trackers
+        if (checkControllers && checkTrackers && (HMD_count == 1 && controller_count == 2 && tracker_count == trackerNum)) {
             break;
         }
     }
 
-    if (checkControllers) {
+    if (!checkControllers && !checkTrackers)
+    {
+        std::cout << "HMD is identified..." << std::endl;
+        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl;
+        std::cout << "All Specified Connection Identified.. Start VR system.." << std::endl;
+    }
+    else if(checkControllers && !checkTrackers) {
         std::cout << "One HMD and Two controllers are identified..." << std::endl;
         std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl << "LEFT CONTROLLER:  " << LEFT_CONTROLLER_INDEX << std::endl << "RIGHT CONTROLLER:  " << RIGHT_CONTROLLER_INDEX << std::endl;
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
+    else if(!checkControllers && checkTrackers) {
+        std::cout << "One HMD and " << trackerNum << " trackers are identified..." << std::endl;
+        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl << "Tracker:  " << TRACKER_1_INDEX << std::endl;
+        std::cout << "Start VR system and ROS NODE" << std::endl;
+    }
     else {
-        std::cout << "HMD is identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl;
-        std::cout << "All Specified Connection Identified.. Start VR system.." << std::endl;
+        std::cout << "One HMD, Two controllers and "<<  trackerNum << " trackers are identified..." << std::endl;
+        std::cout << "Start VR system and ROS NODE" << std::endl;
     }
 }
 
@@ -1868,34 +1920,31 @@ VR::matrix_3_4 HMD::makeTrackingmsg(_FLOAT array) {
     return msg;
 }
 void HMD::rosPublish() {
-    while (ros::ok()) {
+    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
 
-        VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
+    // HMD : Send only rotation parameters(euler or quarternion)
+    // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
 
-        // HMD : Send only rotation parameters(euler or quarternion)
-        // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
-
-         HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
-         HMD_world = map2array(refMatInv * HMD_curEig);
-         HMD_world_coord_change = map2array(coordinate(refMatInv * HMD_curEig));
-         HMD_worldEigInv = map2eigen(HMD_world).inverse();
-        if (checkControllers) {
-             LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-             RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-             HMD_LEFTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * LEFTCONTROLLER_curEig));
-             HMD_RIGHTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * RIGHTCONTROLLER_curEig));
-        }
-        if (pubPose) {
-            hmd_pub.publish(makeTrackingmsg(HMD_world_coord_change));
-            if (checkControllers) {
-                leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
-                rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
-            }
-        }
-
-        ros::spinOnce();
+        HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+        HMD_world = map2array(refMatInv * HMD_curEig);
+        HMD_world_coord_change = map2array(coordinate(refMatInv * HMD_curEig));
+        HMD_worldEigInv = map2eigen(HMD_world).inverse();
+    if (checkControllers) {
+            LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+            RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+            TRACKER_1_curEig = map2eigen(m_rTrackedDevicePose[TRACKER_1_INDEX].mDeviceToAbsoluteTracking.m);
+            HMD_LEFTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * LEFTCONTROLLER_curEig));
+            HMD_RIGHTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * RIGHTCONTROLLER_curEig));
+            HMD_TRACKER1 = map2array(coordinate_z(HMD_curEig.inverse() * TRACKER_1_curEig));
     }
-
+    if (pubPose) {
+        hmd_pub.publish(makeTrackingmsg(HMD_world_coord_change));
+        if (checkControllers) {
+            leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
+            rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
+            tracker_1_pub.publish(makeTrackingmsg(HMD_TRACKER1));
+        }
+    }
 }
 
 

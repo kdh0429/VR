@@ -10,6 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   message_generation
+  cv_bridge
+  image_transport
+  message_filters
 )
 
 find_package( OpenCV REQUIRED )
@@ -26,7 +29,7 @@ generate_messages(
 catkin_package( ## if you dont add this, executables are not found
   INCLUDE_DIRS include
   LIBRARIES VR
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime 
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters image_transport cv_bridge sensor_msgs
 )
 
 
