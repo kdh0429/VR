@@ -91,7 +91,7 @@ public:
 
 	bool checkControllers = false;
 	bool checkTrackers = false;
-	static const uint32_t trackerNum = 5;
+	static const uint32_t trackerNum = 6;
 	char serialNumber[trackerNum][15];
 	bool pubPose = false;
 

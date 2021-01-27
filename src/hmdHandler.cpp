@@ -600,10 +600,10 @@ void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
     // Matrix4 mat( outermat.data() );
     //Matrix4 poseHMD = GetHMDMatrixPoseEye(vr::Eye_Left);
     //Matrix4 staticMat = poseHMD.invertEuclidean() * mat;
-    Vector4 I = mat * Vector4(-0.1, 0.1, -0.25, 1);
-    Vector4 J = mat * Vector4(0.1, 0.1, -0.25, 1);
-    Vector4 K = mat * Vector4(0.1, 0.3, -0.25, 1);
-    Vector4 L = mat * Vector4(-0.1, 0.3, -0.25, 1);
+    Vector4 I = mat * Vector4(0.1, 0.1, 0.25, 1);
+    Vector4 J = mat * Vector4(-0.1, 0.1, 0.25, 1);
+    Vector4 K = mat * Vector4(-0.1, 0.3, 0.25, 1);
+    Vector4 L = mat * Vector4(0.1, 0.3, 0.25, 1);
  
     AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata); //Back
     AddCubeVertex(I.x, I.y, I.z, 1, 1, vertdata);
@@ -1206,8 +1206,8 @@ void HMD::init() {
 
     ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>("/ricoh_h264_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
 
-    image_transport::ImageTransport it(node);
-    image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
+    //image_transport::ImageTransport it(node);
+    //image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
 
     vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str());
 
@@ -1754,7 +1754,7 @@ bool HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
 /* Check HMD, Controllers connection state */
 void HMD::checkConnection() {
     std::cout << "Maximum Number of Device that can be tracked: " << vr::k_unMaxTrackedDeviceCount << std::endl;
-
+    std::cout << "Number of tracker to find: " << trackerNum << std::endl;
     std::cout << "Please Connect Your HMD and two controllers to start this program" << std::endl;
 
     while (true) {
@@ -1979,6 +1979,8 @@ void HMD::rosPublish() {
                     tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
                 if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
                     tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                if (std::string(serialNumber[i]) == "LHR-5423DE85")
+                    tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
             }
         }
     }
