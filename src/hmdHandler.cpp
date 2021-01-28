@@ -40,16 +40,12 @@ HMD::HMD(int arc, char* arv[])
     , m_bShowCubes(true)
 
 {
-    
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
     checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
-
-
-
 }
 
 /* HMD Destructor IMPLEMENTATION*/
@@ -1089,6 +1085,7 @@ void HMD::init() {
         std::string topic_name = "TRACKER" + std::to_string(i);
         tracker_pub[i] = node.advertise<VR::matrix_3_4>(topic_name, 1000);
     }
+    tracker_status_pub = node.advertise<std_msgs::Bool>("TRACKERSTATUS", 1000);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
@@ -1943,7 +1940,7 @@ void HMD::rosPublish() {
     // HMD : Send only rotation parameters(euler or quarternion)
     // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
 
-        HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
     if (checkControllers) 
     {
         LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
@@ -1965,22 +1962,31 @@ void HMD::rosPublish() {
             rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
         }
         if (checkTrackers){
+            allTrackersFine = true;
             for (int i=0; i<trackerNum; i++)
             {
-                if (std::string(serialNumber[i]) == "LHR-B979AA9E")
-                    tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
-
-                if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
-                    tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
-
-                if (std::string(serialNumber[i]) == "LHR-7330E069")
-                    tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                if (std::string(serialNumber[i]) == "LHR-8C0A4142")
-                    tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
-                    tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                if (std::string(serialNumber[i]) == "LHR-5423DE85")
-                    tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                allTrackersFine *= m_rTrackedDevicePose[TRACKER_INDEX[i]].bPoseIsValid;
+            }
+            allTrackersFineData.data = allTrackersFine;
+            tracker_status_pub.publish(allTrackersFineData);
+            
+            if (allTrackersFine)
+            {
+                for (int i=0; i<trackerNum; i++)
+                {                
+                    if (std::string(serialNumber[i]) == "LHR-B979AA9E")
+                        tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
+                        tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-7330E069")
+                        tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-8C0A4142")
+                        tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
+                        tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-5423DE85")
+                        tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                }
             }
         }
     }
