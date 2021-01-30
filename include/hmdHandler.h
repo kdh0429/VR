@@ -93,7 +93,7 @@ public:
 	bool checkTrackers = false;
 	bool allTrackersFine = true;
 	std_msgs::Bool allTrackersFineData;
-	static const uint32_t trackerNum = 6;
+	static const uint32_t trackerNum = 1;
 	char serialNumber[trackerNum][15];
 	bool pubPose = false;
 

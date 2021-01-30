@@ -43,7 +43,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 }
@@ -172,8 +172,9 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1);
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
 
-    cv::imshow("LEFT front", hmdPtr->LeftcubeBack);
+    
     cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
+    cv::imshow("LEFT front", hmdPtr->LeftcubeBack);
 
     end = clock();
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
@@ -182,7 +183,6 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     
     cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
     cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    
     cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
     cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
     cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
@@ -1096,6 +1096,7 @@ void HMD::init() {
 
     eError = vr::VRInitError_None;
     VRSystem = vr::VR_Init(&eError, vr::VRApplication_Scene);
+    // VRSystem->ResetSeatedZeroPose();
 
     if (eError != vr::VRInitError_None)
     {
