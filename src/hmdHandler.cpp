@@ -530,15 +530,48 @@ void HMD::AddCubeVertex(float fl0, float fl1, float fl2, float fl3, float fl4, s
 void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
 {
     // Matrix4 mat( outermat.data() );
+    
+    if (hmd_init == false){
+    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
+    HMD_init = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    Matrix3f hmd_rotation= HMD_init.block(0,0,3,3);
+    Vector3d rpy = rot2Euler(hmd_rotation);
+    yaw_angle = -rpy(1);
+    hmd_init = true;
+    }
+    // Matrix4d hmd_yaw;
+    // hmd_yaw.setIdentity();
 
-    Vector4 A = mat * Vector4(-0.5, 0, -0.5, 1);
-    Vector4 B = mat * Vector4(0.5, 0, -0.5, 1);
-    Vector4 C = mat * Vector4(0.5, 1, -0.5, 1);
-    Vector4 D = mat * Vector4(-0.5, 1, -0.5, 1);
-    Vector4 E = mat * Vector4(-0.5, 0, 0.5, 1);
-    Vector4 F = mat * Vector4(0.5, 0, 0.5, 1);
-    Vector4 G = mat * Vector4(0.5, 1, 0.5, 1);
-    Vector4 H = mat * Vector4(-0.5, 1, 0.5, 1);
+    // hmd_yaw(0, 0) = cos(yaw_angle);
+    // hmd_yaw(1, 0) = sin(yaw_angle);
+    // hmd_yaw(2, 0) = 0.0;
+
+    // hmd_yaw(0, 1) = -sin(yaw_angle);
+    // hmd_yaw(1, 1) = cos(yaw_angle);
+    // hmd_yaw(2, 1) = 0.0;
+
+    // hmd_yaw(0, 2) = 0.0;
+    // hmd_yaw(1, 2) = 0.0;
+    // hmd_yaw(2, 2) = 1.0;
+
+    Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
+    std::cout<<"Yaw angle "<<yaw_angle << std::endl; 
+    Vector4 A = mat * hmd_yaw * Vector4(-0.5, 0, -0.5, 1);
+    Vector4 B = mat * hmd_yaw * Vector4(0.5, 0, -0.5, 1);
+    Vector4 C = mat * hmd_yaw * Vector4(0.5, 1, -0.5, 1);
+    Vector4 D = mat * hmd_yaw * Vector4(-0.5, 1, -0.5, 1);
+    Vector4 E = mat * hmd_yaw * Vector4(-0.5, 0, 0.5, 1);
+    Vector4 F = mat * hmd_yaw * Vector4(0.5, 0, 0.5, 1);
+    Vector4 G = mat * hmd_yaw * Vector4(0.5, 1, 0.5, 1);
+    Vector4 H = mat * hmd_yaw * Vector4(-0.5, 1, 0.5, 1);
+    // Vector4 A = mat * Vector4(-0.5, 0, -0.5, 1);
+    // Vector4 B = mat * Vector4(0.5, 0, -0.5, 1);
+    // Vector4 C = mat * Vector4(0.5, 1, -0.5, 1);
+    // Vector4 D = mat * Vector4(-0.5, 1, -0.5, 1);
+    // Vector4 E = mat * Vector4(-0.5, 0, 0.5, 1);
+    // Vector4 F = mat * Vector4(0.5, 0, 0.5, 1);
+    // Vector4 G = mat * Vector4(0.5, 1, 0.5, 1);
+    // Vector4 H = mat * Vector4(-0.5, 1, 0.5, 1);
 
     if (flag == 0){
         // triangles instead of quads
@@ -1088,7 +1121,7 @@ void HMD::init() {
     tracker_status_pub = node.advertise<std_msgs::Bool>("TRACKERSTATUS", 1000);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
-    {
+    {   
         printf("%s - SDL could not initialize! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
         return;
     }
@@ -1097,6 +1130,7 @@ void HMD::init() {
     eError = vr::VRInitError_None;
     VRSystem = vr::VR_Init(&eError, vr::VRApplication_Scene);
     // VRSystem->ResetSeatedZeroPose();
+    std::cout<<"Init"<<std::endl;
 
     if (eError != vr::VRInitError_None)
     {
@@ -1184,6 +1218,9 @@ void HMD::init() {
     if (!CreateAllShaders())
         return;
 
+    std::cout << "Start Connection Check" << std::endl;
+    checkConnection();
+    ros::Duration(10.0).sleep();
     SetupTexturemaps();
     SetupScene();
     SetupCameras();
@@ -1199,8 +1236,8 @@ void HMD::init() {
 
     std::cout << "VR Compositor Initialization Success!" << std::endl;
     
-    std::cout << "Start Connection Check" << std::endl;
-    checkConnection();
+
+
 
     ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>("/ricoh_h264_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
 
@@ -1831,6 +1868,7 @@ void HMD::checkConnection() {
         std::cout << "One HMD, Two controllers and "<<  trackerNum << " trackers are identified..." << std::endl;
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
+
 }
 
 
@@ -1994,3 +2032,20 @@ void HMD::rosPublish() {
 }
 
 
+  Vector3d HMD::rot2Euler(Matrix3f Rot)
+  {
+    double beta;
+    Eigen::Vector3d angle;
+    beta = -asin(Rot(2, 0));
+    double DEG2RAD = 3.14/180;
+    if (abs(beta) < 90 * DEG2RAD)
+      beta = beta;
+    else
+      beta = 180 * DEG2RAD - beta;
+
+    angle(0) = atan2(Rot(2, 1), Rot(2, 2) + 1E-37); //roll
+    angle(2) = atan2(Rot(1, 0), Rot(0, 0) + 1E-37); //pitch
+    angle(1) = beta;                                //yaw
+
+    return angle;
+  }

@@ -110,10 +110,14 @@ public:
 	Mat coordinate_z(Mat array);
 	Mat coordinate_robot(Mat array);
 	Mat coordinate(Mat array);
+	Vector3d rot2Euler(Matrix3f Rot);
 	VR::matrix_3_4 makeTrackingmsg(_FLOAT array);
 
 	Mat refMat, refMatInv;
 	Mat HMD_curEig;
+	Mat HMD_init;
+	bool hmd_init=false;
+	double yaw_angle;
 	_FLOAT HMD_world;
 	_FLOAT HMD_world_coord_change;
 	Mat LEFTCONTROLLER_curEig;
