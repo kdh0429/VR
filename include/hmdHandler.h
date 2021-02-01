@@ -1,5 +1,9 @@
 #include "render.h"
 #include "std_msgs/Bool.h"
+#include <mutex>
+#include <thread>
+
+
 #ifndef hmdHandler_h
 #define hmdHandler_h
 
@@ -89,14 +93,15 @@ public:
 	int argc_arg;
 	char** argv_arg;
 
+	
 	bool checkControllers = false;
 	bool checkTrackers = false;
 	bool allTrackersFine = true;
 	std_msgs::Bool allTrackersFineData;
-	static const uint32_t trackerNum = 1;
+	static const uint32_t trackerNum = 6;
 	char serialNumber[trackerNum][15];
 	bool pubPose = false;
-
+	int loop_tick_ = 0;
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
 
 	//vr is  right-handed system
@@ -117,6 +122,7 @@ public:
 	Mat HMD_curEig;
 	Mat HMD_init;
 	bool hmd_init=false;
+	bool hmd_init_bool = false;
 	double yaw_angle;
 	_FLOAT HMD_world;
 	_FLOAT HMD_world_coord_change;
@@ -158,7 +164,13 @@ private:
 public:
 	cv::Mat RvizScreen;
 	int Rviz_targetDim = 256;
-
+	
+	bool is_stream_process_finished {true};
+	bool first_data {true};
+	std::mutex render_mutex;
+	// std::mutex stream_packet_mutex;
+	std::shared_ptr<std_msgs::UInt8MultiArray> stored_stream_packet;
+	std::thread process_stream_thread;
 
 /* vr component members */
 public:
@@ -178,10 +190,11 @@ public:
 	void ShutDown();
 
 	void RunMainLoop();
+	void RunRosLoop();
 	bool HandleInput();
 	void ProcessVREvent(const vr::VREvent_t& event);
-	
 
+	void ROSTasks();	
 /* vr Rendering members (OpenGL + OpenVR) */
 	bool BInitGL();
 	void RenderFrame();

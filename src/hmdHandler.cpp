@@ -1,5 +1,8 @@
 #include "hmdHandler.h"
 
+
+
+
 void ThreadSleep(unsigned long nMilliseconds)
 {
 #if defined(_WIN32)
@@ -43,9 +46,10 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = false;
+    checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
+
 }
 
 /* HMD Destructor IMPLEMENTATION*/
@@ -65,18 +69,30 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 }
 
-void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) {
+void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
+{
+    // viz_stream_mutex.
+    // hmdPtr->loop_tick_++;
+    // if(hmdPtr->loop_tick_%10 != 0){
+    //     return;
+    // }
+    std::lock_guard<std::mutex> guard(hmdPtr->render_mutex);
+    const auto streamPacket = hmdPtr->stored_stream_packet;
+
+    
     clock_t start, end;
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
-
-    //cout << streamPtr->ricohPacket.size << endl;
+    std::cout << "test" << std::endl;
+    // cout << streamPtr->ricohPacket.size << endl;
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
 
     streamPtr->ricohPacket.data = (uint8_t*)&(streamPacket->data[0]);
     int gotFrame = 0;
 
+    // std::scoped_lock<std::mutex> _(hmdPtr->render_mutex);
+    // hmdPtr->render_mutex.lock
     if (!(hmdPtr->streamParamInit)) {
         std::cout << "First streaminng input is recognized.. streaming parameters starts to be initialized" << std::endl;
         hmdPtr->width = streamPacket->layout.dim[1].size;
@@ -96,15 +112,20 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
     if (left_len < 0 || !gotFrame) {
         std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
     gotFrame = 0;
 
     streamPtr->ricohPacket.size = streamPacket->layout.dim[4].size;
     streamPtr->ricohPacket.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    
+    // stream_packet_mutex.unlock();
+    
     int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket));
     if (right_len < 0 || !gotFrame) {
         std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -117,13 +138,14 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
 
     hmdPtr->rightCvEquirect = cv::Mat(hmdPtr->height, hmdPtr->width, CV_8UC3);
     (hmdPtr->rightDat).data[0] = (uint8_t*)(hmdPtr->rightCvEquirect).data;
-
+    
     //avpicture_fill((AVPicture*)&dst, dst.data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
 
 
 
     if (left_len < 0 || !gotFrame) {
         std::cout << "Could not Decode ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -132,6 +154,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
 
     if (hmdPtr->left_Pixfmt != hmdPtr->right_Pixfmt) {
         std::cout << "Left, Right Pixel Format are different. Please adjust format" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -141,6 +164,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     if (streamPtr->ricohContext == NULL) {
         fprintf(stderr, "Cannot initialize context\n");
         std::cout << "Cannot initialize context" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -173,9 +197,10 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
 
     
-    cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
-    cv::imshow("LEFT front", hmdPtr->LeftcubeBack);
-
+    //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
+    //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
+    
+    
     end = clock();
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
     cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
@@ -199,53 +224,6 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
 
 
-    for (int i = 0; i < 7; i++) {
-        glBindTexture(GL_TEXTURE_2D, hmdPtr->m_Texture[i]);
-
-        switch (i) {
-        case 0:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeFront.cols, hmdPtr->LeftcubeFront.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeFront.data[0]);
-            break;
-        case 1:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeBack.cols, hmdPtr->LeftcubeBack.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeBack.data[0]);
-            break;
-        case 2:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeTop.cols, hmdPtr->LeftcubeTop.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeTop.data[0]);
-            break;
-        case 3:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeBottom.cols, hmdPtr->LeftcubeBottom.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeBottom.data[0]);
-            break;
-        case 4:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeLeft.cols, hmdPtr->LeftcubeLeft.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeLeft.data[0]);
-            break;
-        case 5:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeRight.cols, hmdPtr->LeftcubeRight.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeRight.data[0]);
-            break;
-        case 6:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->RvizScreen.cols, hmdPtr->RvizScreen.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->RvizScreen.data[0]);
-        }
-        
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-        GLfloat fLargest;
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-    }
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
@@ -268,7 +246,26 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
     //cv::imshow("rviz", hmdPtr->RvizScreen);
     cv::waitKey(1);
-
+    hmdPtr->first_data = false;
+    hmdPtr->is_stream_process_finished = true;
+}
+void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) 
+{
+    if (hmdPtr->is_stream_process_finished)
+    {
+        if (hmdPtr->process_stream_thread.joinable())
+        {
+            hmdPtr->process_stream_thread.join();
+        }
+        hmdPtr->is_stream_process_finished = false;
+        hmdPtr->stored_stream_packet = std::make_shared<std_msgs::UInt8MultiArray>(*streamPacket);
+        // streamCallbackBackground( streamPtr, hmdPtr);
+        hmdPtr->process_stream_thread = std::thread(streamCallbackBackground, streamPtr, hmdPtr);
+    }
+    else
+    {
+        ROS_WARN("stream data is not processed yet");
+    }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
 {
@@ -456,7 +453,7 @@ bool HMD::CreateAllShaders()
         "noperspective out vec2 v2UV;\n"
         "void main()\n"
         "{\n"
-        "	v2UV = v2UVIn;\n"
+        "	v2UV = vec2(v2UVIn.s, 1.0 - v2UVIn.t);\n"
         "	gl_Position = position;\n"
         "}\n",
 
@@ -555,7 +552,8 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     // hmd_yaw(2, 2) = 1.0;
 
     Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
-    std::cout<<"Yaw angle "<<yaw_angle << std::endl; 
+    // std::cout<<"Yaw angle "<<yaw_angle << std::endl;
+    /*
     Vector4 A = mat * hmd_yaw * Vector4(-0.5, 0, -0.5, 1);
     Vector4 B = mat * hmd_yaw * Vector4(0.5, 0, -0.5, 1);
     Vector4 C = mat * hmd_yaw * Vector4(0.5, 1, -0.5, 1);
@@ -564,15 +562,17 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     Vector4 F = mat * hmd_yaw * Vector4(0.5, 0, 0.5, 1);
     Vector4 G = mat * hmd_yaw * Vector4(0.5, 1, 0.5, 1);
     Vector4 H = mat * hmd_yaw * Vector4(-0.5, 1, 0.5, 1);
-    // Vector4 A = mat * Vector4(-0.5, 0, -0.5, 1);
-    // Vector4 B = mat * Vector4(0.5, 0, -0.5, 1);
-    // Vector4 C = mat * Vector4(0.5, 1, -0.5, 1);
-    // Vector4 D = mat * Vector4(-0.5, 1, -0.5, 1);
-    // Vector4 E = mat * Vector4(-0.5, 0, 0.5, 1);
-    // Vector4 F = mat * Vector4(0.5, 0, 0.5, 1);
-    // Vector4 G = mat * Vector4(0.5, 1, 0.5, 1);
-    // Vector4 H = mat * Vector4(-0.5, 1, 0.5, 1);
-
+    */
+    
+    Vector4 A = mat * Vector4(-0.5, 0, -0.5, 1);
+    Vector4 B = mat * Vector4(0.5, 0, -0.5, 1);
+    Vector4 C = mat * Vector4(0.5, 1, -0.5, 1);
+    Vector4 D = mat * Vector4(-0.5, 1, -0.5, 1);
+    Vector4 E = mat * Vector4(-0.5, 0, 0.5, 1);
+    Vector4 F = mat * Vector4(0.5, 0, 0.5, 1);
+    Vector4 G = mat * Vector4(0.5, 1, 0.5, 1);
+    Vector4 H = mat * Vector4(-0.5, 1, 0.5, 1);
+    
     if (flag == 0){
         // triangles instead of quads
         AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata); //Front
@@ -818,7 +818,7 @@ void HMD::SetupCompanionWindow()
         return;
 
     std::vector<VertexDataWindow> vVerts;
-
+    
     // left eye verts
     vVerts.push_back(VertexDataWindow(Vector2(-1, -1), Vector2(0, 1)));
     vVerts.push_back(VertexDataWindow(Vector2(0, -1), Vector2(1, 1)));
@@ -1110,6 +1110,8 @@ bool HMD::HandleInput()
 void HMD::init() {
     ros::init(this->argc_arg, this->argv_arg, "HMD");
     ros::NodeHandle node;
+    // ros::AsyncSpinner spinner(0);
+    // spinner.start();
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
@@ -1125,7 +1127,6 @@ void HMD::init() {
         printf("%s - SDL could not initialize! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
         return;
     }
-
 
     eError = vr::VRInitError_None;
     VRSystem = vr::VR_Init(&eError, vr::VRApplication_Scene);
@@ -1204,7 +1205,7 @@ void HMD::init() {
     m_iSceneVolumeHeight = m_iSceneVolumeInit;
     m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
-    m_fScale = 10.0f;
+    m_fScale = 5.0f;
     m_fScaleSpacing = 0.0f;
 
     m_fNearClip = 0.1f;
@@ -1218,9 +1219,9 @@ void HMD::init() {
     if (!CreateAllShaders())
         return;
 
-    std::cout << "Start Connection Check" << std::endl;
+    std::cout << "Start Connection Check" << std::endl;   
     checkConnection();
-    ros::Duration(10.0).sleep();
+    //ros::Duration(5.0).sleep();
     SetupTexturemaps();
     SetupScene();
     SetupCameras();
@@ -1239,7 +1240,10 @@ void HMD::init() {
 
 
 
-    ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>("/ricoh_h264_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
+    ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
+                                                            1, 
+                                                            boost::bind(streamCallback, _1, &streamObj, this));
+                                                            // ros::TransportHints().udp());
 
     //image_transport::ImageTransport it(node);
     //image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
@@ -1261,10 +1265,21 @@ void HMD::init() {
     vr::VRInput()->GetInputSourceHandle("/user/hand/right", &m_rHand[Right].m_source);
     vr::VRInput()->GetActionHandle("/actions/demo/in/Hand_Right", &m_rHand[Right].m_actionPose);
 
-
+    hmd_init_bool = true;
+    // ros::waitForShutdown();
 }
 
 
+void HMD::ROSTasks()
+{
+    ros::Rate r(1000);
+    while (ros::ok())
+    {
+        rosPublish();
+        r.sleep();
+        ros::spinOnce();
+    }
+}
 
 void HMD::RunMainLoop()
 {
@@ -1272,74 +1287,170 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-    ros::Rate rate(1000);
+    //loop_tick_ = 0;
+    std::thread t (&HMD::ROSTasks, this);
+
     while (ros::ok())
     {
         bQuit = HandleInput();
         RenderFrame();
-        rosPublish();
-
-        ros::spinOnce();
-        rate.sleep();
     }
 
+    t.join();
    SDL_StopTextInput();
+}
+
+// void HMD::RunMainLoop()
+// {
+//     bool bQuit = false;
+
+//     SDL_StartTextInput();
+//     SDL_ShowCursor(SDL_DISABLE);
+//     //loop_tick_ = 0;
+//     // ros::AsyncSpinner spinner(0);
+//     // spinner.start();
+   
+//     while (ros::ok())
+//     {
+//         bQuit = HandleInput();
+//         rosPublish();
+//         RenderFrame();
+//         //if(loop_tick_%10 == 0)
+//         ros::spinOnce();
+//         //loop_tick_++;
+//     }
+//    SDL_StopTextInput();
+//     // ros::waitForShutdown();
+// }
+
+void HMD::RunRosLoop()
+{
+    ros::Rate rate(1000);
+    while (ros::ok())
+    {
+        rosPublish();
+        rate.sleep();
+    }
 }
 
 void HMD::RenderFrame()
 {
-    // for now as fast as possible
-    if (VRSystem)
+    ros::Rate r(30);
+    while (ros::ok())
     {
-        RenderControllerAxes();
-        RenderStereoTargets();
-        RenderCompanionWindow();
+        r.sleep();
+        // for now as fast as possible
+        
+        if (first_data)
+        {
+            continue;
+        }
 
-        vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-        vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
-        vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-        vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+        render_mutex.lock();
+        for (int i = 0; i < 7; i++) {
+            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
+        
+            switch (i) {
+            case 0:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeFront.data[0]);
+                break;
+            case 1:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBack.cols, LeftcubeBack.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBack.data[0]);
+                break;
+            case 2:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeTop.cols, LeftcubeTop.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeTop.data[0]);
+                break;
+            case 3:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBottom.cols, LeftcubeBottom.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBottom.data[0]);
+                break;
+            case 4:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeLeft.cols, LeftcubeLeft.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeLeft.data[0]);
+                break;
+            case 5:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
+                break;
+            case 6:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RvizScreen.cols, RvizScreen.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RvizScreen.data[0]);
+            }
+            
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+            GLfloat fLargest;
+            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+        }
+
+        if (VRSystem)
+        {
+            RenderControllerAxes();
+            RenderStereoTargets();
+            //RenderCompanionWindow();
+            
+            vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
+            vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+            
+        }
+
+        if (m_bVblank && m_bGlFinishHack)
+        {
+            //$ HACKHACK. From gpuview profiling, it looks like there is a bug where two renders and a present
+            // happen right before and after the vsync causing all kinds of jittering issues. This glFinish()
+            // appears to clear that up. Temporary fix while I try to get nvidia to investigate this problem.
+            // 1/29/2014 mikesart
+            glFinish();
+        }
+
+        // SwapWindow
+        {
+            SDL_GL_SwapWindow(m_pCompanionWindow);
+        }
+
+        // Clear
+        {
+            // We want to make sure the glFinish waits for the entire present to complete, not just the submission
+            // of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
+
+        // Flush and wait for swap.
+        if (m_bVblank)
+        {
+            glFlush();
+            glFinish();
+        }
+
+        // Spew out the controller and pose count whenever they change.
+        if (m_iTrackedControllerCount != m_iTrackedControllerCount_Last || m_iValidPoseCount != m_iValidPoseCount_Last)
+        {
+            m_iValidPoseCount_Last = m_iValidPoseCount;
+            m_iTrackedControllerCount_Last = m_iTrackedControllerCount;
+
+            printf("PoseCount:%d(%s) Controllers:%d\n", m_iValidPoseCount, m_strPoseClasses.c_str(), m_iTrackedControllerCount);
+        }
+
+        UpdateHMDMatrixPose();
+
+        render_mutex.unlock();  
     }
-
-    if (m_bVblank && m_bGlFinishHack)
-    {
-        //$ HACKHACK. From gpuview profiling, it looks like there is a bug where two renders and a present
-        // happen right before and after the vsync causing all kinds of jittering issues. This glFinish()
-        // appears to clear that up. Temporary fix while I try to get nvidia to investigate this problem.
-        // 1/29/2014 mikesart
-        glFinish();
-    }
-
-    // SwapWindow
-    {
-        SDL_GL_SwapWindow(m_pCompanionWindow);
-    }
-
-    // Clear
-    {
-        // We want to make sure the glFinish waits for the entire present to complete, not just the submission
-        // of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-
-    // Flush and wait for swap.
-    if (m_bVblank)
-    {
-        glFlush();
-        glFinish();
-    }
-
-    // Spew out the controller and pose count whenever they change.
-    if (m_iTrackedControllerCount != m_iTrackedControllerCount_Last || m_iValidPoseCount != m_iValidPoseCount_Last)
-    {
-        m_iValidPoseCount_Last = m_iValidPoseCount;
-        m_iTrackedControllerCount_Last = m_iTrackedControllerCount;
-
-        printf("PoseCount:%d(%s) Controllers:%d\n", m_iValidPoseCount, m_strPoseClasses.c_str(), m_iTrackedControllerCount);
-    }
-
-    UpdateHMDMatrixPose();
+    
 }
 
 void HMD::UpdateHMDMatrixPose()
@@ -1598,10 +1709,8 @@ void HMD::RenderCompanionWindow()
 {
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, m_nCompanionWindowWidth, m_nCompanionWindowHeight);
-
     glBindVertexArray(m_unCompanionWindowVAO);
     glUseProgram(m_unCompanionWindowProgramID);
-
     // render left eye (first half of index array )
     glBindTexture(GL_TEXTURE_2D, leftEyeDesc.m_nResolveTextureId);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1796,7 +1905,7 @@ void HMD::checkConnection() {
         int HMD_count = 0;
         int controller_count = 0;
         int tracker_count = 0;
-        for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){;
+        for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){
             vr::ETrackedDeviceClass trackedStatus = VRSystem->GetTrackedDeviceClass(i);
             switch (int(trackedStatus)) {
             case 0:  continue;
@@ -2008,7 +2117,6 @@ void HMD::rosPublish() {
             }
             allTrackersFineData.data = allTrackersFine;
             tracker_status_pub.publish(allTrackersFineData);
-            
             if (allTrackersFine)
             {
                 for (int i=0; i<trackerNum; i++)
