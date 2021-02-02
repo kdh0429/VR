@@ -46,7 +46,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = false;
+    checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
