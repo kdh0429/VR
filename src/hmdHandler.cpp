@@ -1,4 +1,7 @@
-    #include "hmdHandler.h"
+#include "hmdHandler.h"
+
+
+
 
 void ThreadSleep(unsigned long nMilliseconds)
 {
@@ -40,14 +43,12 @@ HMD::HMD(int arc, char* arv[])
     , m_bShowCubes(true)
 
 {
-    
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    pubPose = false;
+    checkTrackers = true;
+    pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
-
-
 
 }
 
@@ -68,18 +69,30 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 }
 
-void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) {
+void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
+{
+    // viz_stream_mutex.
+    // hmdPtr->loop_tick_++;
+    // if(hmdPtr->loop_tick_%10 != 0){
+    //     return;
+    // }
+    std::lock_guard<std::mutex> guard(hmdPtr->render_mutex);
+    const auto streamPacket = hmdPtr->stored_stream_packet;
+
+    
     clock_t start, end;
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
-
-    //cout << streamPtr->ricohPacket.size << endl;
+    std::cout << "test" << std::endl;
+    // cout << streamPtr->ricohPacket.size << endl;
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
 
     streamPtr->ricohPacket.data = (uint8_t*)&(streamPacket->data[0]);
     int gotFrame = 0;
 
+    // std::scoped_lock<std::mutex> _(hmdPtr->render_mutex);
+    // hmdPtr->render_mutex.lock
     if (!(hmdPtr->streamParamInit)) {
         std::cout << "First streaminng input is recognized.. streaming parameters starts to be initialized" << std::endl;
         hmdPtr->width = streamPacket->layout.dim[1].size;
@@ -99,15 +112,20 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
     if (left_len < 0 || !gotFrame) {
         std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
     gotFrame = 0;
 
     streamPtr->ricohPacket.size = streamPacket->layout.dim[4].size;
     streamPtr->ricohPacket.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    
+    // stream_packet_mutex.unlock();
+    
     int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket));
     if (right_len < 0 || !gotFrame) {
         std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -120,13 +138,14 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
 
     hmdPtr->rightCvEquirect = cv::Mat(hmdPtr->height, hmdPtr->width, CV_8UC3);
     (hmdPtr->rightDat).data[0] = (uint8_t*)(hmdPtr->rightCvEquirect).data;
-
+    
     //avpicture_fill((AVPicture*)&dst, dst.data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
 
 
 
     if (left_len < 0 || !gotFrame) {
         std::cout << "Could not Decode ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -135,6 +154,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
 
     if (hmdPtr->left_Pixfmt != hmdPtr->right_Pixfmt) {
         std::cout << "Left, Right Pixel Format are different. Please adjust format" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -144,6 +164,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     if (streamPtr->ricohContext == NULL) {
         fprintf(stderr, "Cannot initialize context\n");
         std::cout << "Cannot initialize context" << std::endl;
+        hmdPtr->is_stream_process_finished = true;
         return;
     }
 
@@ -175,9 +196,11 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1);
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
 
-    cv::imshow("LEFT front", hmdPtr->LeftcubeBack);
-    cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
-
+    
+    //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
+    //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
+    
+    
     end = clock();
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
     cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
@@ -185,7 +208,6 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     
     cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
     cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    
     cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
     cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
     cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
@@ -202,54 +224,6 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
 
 
-    for (int i = 0; i < 7; i++) {
-        glBindTexture(GL_TEXTURE_2D, hmdPtr->m_Texture[i]);
-
-        switch (i) {
-        case 0:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeFront.cols, hmdPtr->LeftcubeFront.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeFront.data[0]);
-            break;
-        case 1:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeBack.cols, hmdPtr->LeftcubeBack.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeBack.data[0]);
-            break;
-        case 2:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeTop.cols, hmdPtr->LeftcubeTop.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeTop.data[0]);
-            break;
-        case 3:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeBottom.cols, hmdPtr->LeftcubeBottom.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeBottom.data[0]);
-            break;
-        case 4:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeLeft.cols, hmdPtr->LeftcubeLeft.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeLeft.data[0]);
-            break;
-        case 5:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->LeftcubeRight.cols, hmdPtr->LeftcubeRight.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->LeftcubeRight.data[0]);
-            break;
-        case 6:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hmdPtr->RvizScreen.cols, hmdPtr->RvizScreen.rows,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, &hmdPtr->RvizScreen.data[0]);
-        }
-        
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-        GLfloat fLargest;
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-
-    }
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
@@ -270,9 +244,46 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     cv::imshow("RIGHT Right face", hmdPtr->RightcubeRight);
     cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
+    //cv::imshow("rviz", hmdPtr->RvizScreen);
     cv::waitKey(1);
-
+    hmdPtr->first_data = false;
+    hmdPtr->is_stream_process_finished = true;
 }
+void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) 
+{
+    if (hmdPtr->is_stream_process_finished)
+    {
+        if (hmdPtr->process_stream_thread.joinable())
+        {
+            hmdPtr->process_stream_thread.join();
+        }
+        hmdPtr->is_stream_process_finished = false;
+        hmdPtr->stored_stream_packet = std::make_shared<std_msgs::UInt8MultiArray>(*streamPacket);
+        // streamCallbackBackground( streamPtr, hmdPtr);
+        hmdPtr->process_stream_thread = std::thread(streamCallbackBackground, streamPtr, hmdPtr);
+    }
+    else
+    {
+        ROS_WARN("stream data is not processed yet");
+    }
+}
+void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
+{
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+        cv_ptr = cv_bridge::toCvCopy(rvizImg, sensor_msgs::image_encodings::RGBA8);
+        std::cout << "hi" << std::endl;
+        hmdPtr->RvizScreen = cv_ptr->image;
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+}
+
+
 
 /* Shader Compiler  */
 GLuint HMD::CompileGLShader(const char* pchShaderName, const char* pchVertexShader, const char* pchFragmentShader)
@@ -442,7 +453,7 @@ bool HMD::CreateAllShaders()
         "noperspective out vec2 v2UV;\n"
         "void main()\n"
         "{\n"
-        "	v2UV = v2UVIn;\n"
+        "	v2UV = vec2(v2UVIn.s, 1.0 - v2UVIn.t);\n"
         "	gl_Position = position;\n"
         "}\n",
 
@@ -516,7 +527,43 @@ void HMD::AddCubeVertex(float fl0, float fl1, float fl2, float fl3, float fl4, s
 void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
 {
     // Matrix4 mat( outermat.data() );
+    
+    if (hmd_init == false){
+    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
+    HMD_init = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    Matrix3f hmd_rotation= HMD_init.block(0,0,3,3);
+    Vector3d rpy = rot2Euler(hmd_rotation);
+    yaw_angle = -rpy(1);
+    hmd_init = true;
+    }
+    // Matrix4d hmd_yaw;
+    // hmd_yaw.setIdentity();
 
+    // hmd_yaw(0, 0) = cos(yaw_angle);
+    // hmd_yaw(1, 0) = sin(yaw_angle);
+    // hmd_yaw(2, 0) = 0.0;
+
+    // hmd_yaw(0, 1) = -sin(yaw_angle);
+    // hmd_yaw(1, 1) = cos(yaw_angle);
+    // hmd_yaw(2, 1) = 0.0;
+
+    // hmd_yaw(0, 2) = 0.0;
+    // hmd_yaw(1, 2) = 0.0;
+    // hmd_yaw(2, 2) = 1.0;
+
+    Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
+    // std::cout<<"Yaw angle "<<yaw_angle << std::endl;
+    /*
+    Vector4 A = mat * hmd_yaw * Vector4(-0.5, 0, -0.5, 1);
+    Vector4 B = mat * hmd_yaw * Vector4(0.5, 0, -0.5, 1);
+    Vector4 C = mat * hmd_yaw * Vector4(0.5, 1, -0.5, 1);
+    Vector4 D = mat * hmd_yaw * Vector4(-0.5, 1, -0.5, 1);
+    Vector4 E = mat * hmd_yaw * Vector4(-0.5, 0, 0.5, 1);
+    Vector4 F = mat * hmd_yaw * Vector4(0.5, 0, 0.5, 1);
+    Vector4 G = mat * hmd_yaw * Vector4(0.5, 1, 0.5, 1);
+    Vector4 H = mat * hmd_yaw * Vector4(-0.5, 1, 0.5, 1);
+    */
+    
     Vector4 A = mat * Vector4(-0.5, 0, -0.5, 1);
     Vector4 B = mat * Vector4(0.5, 0, -0.5, 1);
     Vector4 C = mat * Vector4(0.5, 1, -0.5, 1);
@@ -525,7 +572,7 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     Vector4 F = mat * Vector4(0.5, 0, 0.5, 1);
     Vector4 G = mat * Vector4(0.5, 1, 0.5, 1);
     Vector4 H = mat * Vector4(-0.5, 1, 0.5, 1);
-
+    
     if (flag == 0){
         // triangles instead of quads
         AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata); //Front
@@ -559,6 +606,14 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
         AddCubeVertex(E.x, E.y, E.z, 0, 0, vertdata);
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
     }
+    else if (flag == 4) {
+        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata); //Right
+        AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
+        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        AddCubeVertex(G.x, G.y, G.z, 0, 0, vertdata);
+        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata);
+    }
     else if (flag == 5) {
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata); //Left
         AddCubeVertex(E.x, E.y, E.z, 1, 1, vertdata);
@@ -567,31 +622,24 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
         AddCubeVertex(D.x, D.y, D.z, 0, 0, vertdata);
         AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
     }
-    else {
-        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata); //Right
-        AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(G.x, G.y, G.z, 0, 0, vertdata);
-        AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata);
-    }
 }
 
 void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
 {
     // Matrix4 mat( outermat.data() );
-
-    Vector4 A = mat * Vector4(-0.25, 0.0, -0.25, 1);
-    Vector4 B = mat * Vector4(0.25, 0.0, -0.25, 1);
-    Vector4 C = mat * Vector4(0.25, 1.0, -0.25, 1);
-    Vector4 D = mat * Vector4(-0.25, 1.0, -0.25, 1);
-
-    AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata); //Back
-    AddCubeVertex(A.x, A.y, A.z, 1, 1, vertdata);
-    AddCubeVertex(D.x, D.y, D.z, 1, 0, vertdata);
-    AddCubeVertex(D.x, D.y, D.z, 1, 0, vertdata);
-    AddCubeVertex(C.x, C.y, C.z, 0, 0, vertdata);
-    AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata);
+    //Matrix4 poseHMD = GetHMDMatrixPoseEye(vr::Eye_Left);
+    //Matrix4 staticMat = poseHMD.invertEuclidean() * mat;
+    Vector4 I = mat * Vector4(0.1, 0.1, 0.25, 1);
+    Vector4 J = mat * Vector4(-0.1, 0.1, 0.25, 1);
+    Vector4 K = mat * Vector4(-0.1, 0.3, 0.25, 1);
+    Vector4 L = mat * Vector4(0.1, 0.3, 0.25, 1);
+ 
+    AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata); //Back
+    AddCubeVertex(I.x, I.y, I.z, 1, 1, vertdata);
+    AddCubeVertex(L.x, L.y, L.z, 1, 0, vertdata);
+    AddCubeVertex(L.x, L.y, L.z, 1, 0, vertdata);
+    AddCubeVertex(K.x, K.y, K.z, 0, 0, vertdata);
+    AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata);
 }
 
 
@@ -601,7 +649,7 @@ void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
 void HMD::SetupScene()
 {
     if (!VRSystem) {
-        std::cout << "Setupe scene process failed.. program exit" << std::endl;
+        std::cout << "Setup scene process failed.. program exit" << std::endl;
         return;
     }
 
@@ -770,7 +818,7 @@ void HMD::SetupCompanionWindow()
         return;
 
     std::vector<VertexDataWindow> vVerts;
-
+    
     // left eye verts
     vVerts.push_back(VertexDataWindow(Vector2(-1, -1), Vector2(0, 1)));
     vVerts.push_back(VertexDataWindow(Vector2(0, -1), Vector2(1, 1)));
@@ -1062,19 +1110,28 @@ bool HMD::HandleInput()
 void HMD::init() {
     ros::init(this->argc_arg, this->argv_arg, "HMD");
     ros::NodeHandle node;
+    // ros::AsyncSpinner spinner(0);
+    // spinner.start();
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
+    for (int i=0; i<trackerNum; i++)
+    {
+        std::string topic_name = "TRACKER" + std::to_string(i);
+        tracker_pub[i] = node.advertise<VR::matrix_3_4>(topic_name, 1000);
+    }
+    tracker_status_pub = node.advertise<std_msgs::Bool>("TRACKERSTATUS", 1000);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
-    {
+    {   
         printf("%s - SDL could not initialize! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
         return;
     }
 
-
     eError = vr::VRInitError_None;
     VRSystem = vr::VR_Init(&eError, vr::VRApplication_Scene);
+    // VRSystem->ResetSeatedZeroPose();
+    std::cout<<"Init"<<std::endl;
 
     if (eError != vr::VRInitError_None)
     {
@@ -1148,7 +1205,7 @@ void HMD::init() {
     m_iSceneVolumeHeight = m_iSceneVolumeInit;
     m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
-    m_fScale = 10.0f;
+    m_fScale = 5.0f;
     m_fScaleSpacing = 0.0f;
 
     m_fNearClip = 0.1f;
@@ -1162,6 +1219,9 @@ void HMD::init() {
     if (!CreateAllShaders())
         return;
 
+    std::cout << "Start Connection Check" << std::endl;   
+    checkConnection();
+    //ros::Duration(5.0).sleep();
     SetupTexturemaps();
     SetupScene();
     SetupCameras();
@@ -1177,11 +1237,16 @@ void HMD::init() {
 
     std::cout << "VR Compositor Initialization Success!" << std::endl;
     
-    std::cout << "Start Connection Check" << std::endl;
-    checkConnection();
 
-    ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>("/ricoh_h264_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
-    rviz_sub = node.subscribe<std_msgs::UInt8MultiArray>("/rviz_stream", 2, boost::bind(streamCallback, _1, &streamObj, this));
+
+
+    ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
+                                                            1, 
+                                                            boost::bind(streamCallback, _1, &streamObj, this));
+                                                            // ros::TransportHints().udp());
+
+    //image_transport::ImageTransport it(node);
+    //image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
 
     vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str());
 
@@ -1200,10 +1265,21 @@ void HMD::init() {
     vr::VRInput()->GetInputSourceHandle("/user/hand/right", &m_rHand[Right].m_source);
     vr::VRInput()->GetActionHandle("/actions/demo/in/Hand_Right", &m_rHand[Right].m_actionPose);
 
-
+    hmd_init_bool = true;
+    // ros::waitForShutdown();
 }
 
 
+void HMD::ROSTasks()
+{
+    ros::Rate r(1000);
+    while (ros::ok())
+    {
+        rosPublish();
+        r.sleep();
+        ros::spinOnce();
+    }
+}
 
 void HMD::RunMainLoop()
 {
@@ -1211,72 +1287,170 @@ void HMD::RunMainLoop()
 
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
+    //loop_tick_ = 0;
+    std::thread t (&HMD::ROSTasks, this);
 
     while (ros::ok())
     {
         bQuit = HandleInput();
         RenderFrame();
-
-        ros::spinOnce();
     }
 
-    SDL_StopTextInput();
+    t.join();
+   SDL_StopTextInput();
+}
+
+// void HMD::RunMainLoop()
+// {
+//     bool bQuit = false;
+
+//     SDL_StartTextInput();
+//     SDL_ShowCursor(SDL_DISABLE);
+//     //loop_tick_ = 0;
+//     // ros::AsyncSpinner spinner(0);
+//     // spinner.start();
+   
+//     while (ros::ok())
+//     {
+//         bQuit = HandleInput();
+//         rosPublish();
+//         RenderFrame();
+//         //if(loop_tick_%10 == 0)
+//         ros::spinOnce();
+//         //loop_tick_++;
+//     }
+//    SDL_StopTextInput();
+//     // ros::waitForShutdown();
+// }
+
+void HMD::RunRosLoop()
+{
+    ros::Rate rate(1000);
+    while (ros::ok())
+    {
+        rosPublish();
+        rate.sleep();
+    }
 }
 
 void HMD::RenderFrame()
 {
-    // for now as fast as possible
-    if (VRSystem)
+    ros::Rate r(30);
+    while (ros::ok())
     {
-        RenderControllerAxes();
-        RenderStereoTargets();
-        RenderCompanionWindow();
+        r.sleep();
+        // for now as fast as possible
+        
+        if (first_data)
+        {
+            continue;
+        }
 
-        vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-        vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
-        vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-        vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+        render_mutex.lock();
+        for (int i = 0; i < 7; i++) {
+            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
+        
+            switch (i) {
+            case 0:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeFront.data[0]);
+                break;
+            case 1:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBack.cols, LeftcubeBack.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBack.data[0]);
+                break;
+            case 2:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeTop.cols, LeftcubeTop.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeTop.data[0]);
+                break;
+            case 3:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBottom.cols, LeftcubeBottom.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBottom.data[0]);
+                break;
+            case 4:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeLeft.cols, LeftcubeLeft.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeLeft.data[0]);
+                break;
+            case 5:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
+                break;
+            case 6:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RvizScreen.cols, RvizScreen.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RvizScreen.data[0]);
+            }
+            
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+            GLfloat fLargest;
+            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+        }
+
+        if (VRSystem)
+        {
+            RenderControllerAxes();
+            RenderStereoTargets();
+            //RenderCompanionWindow();
+            
+            vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
+            vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+            vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+            
+        }
+
+        if (m_bVblank && m_bGlFinishHack)
+        {
+            //$ HACKHACK. From gpuview profiling, it looks like there is a bug where two renders and a present
+            // happen right before and after the vsync causing all kinds of jittering issues. This glFinish()
+            // appears to clear that up. Temporary fix while I try to get nvidia to investigate this problem.
+            // 1/29/2014 mikesart
+            glFinish();
+        }
+
+        // SwapWindow
+        {
+            SDL_GL_SwapWindow(m_pCompanionWindow);
+        }
+
+        // Clear
+        {
+            // We want to make sure the glFinish waits for the entire present to complete, not just the submission
+            // of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
+
+        // Flush and wait for swap.
+        if (m_bVblank)
+        {
+            glFlush();
+            glFinish();
+        }
+
+        // Spew out the controller and pose count whenever they change.
+        if (m_iTrackedControllerCount != m_iTrackedControllerCount_Last || m_iValidPoseCount != m_iValidPoseCount_Last)
+        {
+            m_iValidPoseCount_Last = m_iValidPoseCount;
+            m_iTrackedControllerCount_Last = m_iTrackedControllerCount;
+
+            printf("PoseCount:%d(%s) Controllers:%d\n", m_iValidPoseCount, m_strPoseClasses.c_str(), m_iTrackedControllerCount);
+        }
+
+        UpdateHMDMatrixPose();
+
+        render_mutex.unlock();  
     }
-
-    if (m_bVblank && m_bGlFinishHack)
-    {
-        //$ HACKHACK. From gpuview profiling, it looks like there is a bug where two renders and a present
-        // happen right before and after the vsync causing all kinds of jittering issues. This glFinish()
-        // appears to clear that up. Temporary fix while I try to get nvidia to investigate this problem.
-        // 1/29/2014 mikesart
-        glFinish();
-    }
-
-    // SwapWindow
-    {
-        SDL_GL_SwapWindow(m_pCompanionWindow);
-    }
-
-    // Clear
-    {
-        // We want to make sure the glFinish waits for the entire present to complete, not just the submission
-        // of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-
-    // Flush and wait for swap.
-    if (m_bVblank)
-    {
-        glFlush();
-        glFinish();
-    }
-
-    // Spew out the controller and pose count whenever they change.
-    if (m_iTrackedControllerCount != m_iTrackedControllerCount_Last || m_iValidPoseCount != m_iValidPoseCount_Last)
-    {
-        m_iValidPoseCount_Last = m_iValidPoseCount;
-        m_iTrackedControllerCount_Last = m_iTrackedControllerCount;
-
-        printf("PoseCount:%d(%s) Controllers:%d\n", m_iValidPoseCount, m_strPoseClasses.c_str(), m_iTrackedControllerCount);
-    }
-
-    UpdateHMDMatrixPose();
+    
 }
 
 void HMD::UpdateHMDMatrixPose()
@@ -1427,12 +1601,11 @@ Matrix4 HMD::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
     
     if (nEye == vr::Eye_Left)
     {
-        
-        matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft  * m_mat4HMDPose;
+        matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
     }
     else if (nEye == vr::Eye_Right)
     {
-        matMVP = m_mat4ProjectionRight * m_mat4eyePosRight  * m_mat4HMDPose;
+        matMVP = m_mat4ProjectionRight * m_mat4eyePosRight * m_mat4HMDPose;
     }
 
     return matMVP;
@@ -1536,10 +1709,8 @@ void HMD::RenderCompanionWindow()
 {
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, m_nCompanionWindowWidth, m_nCompanionWindowHeight);
-
     glBindVertexArray(m_unCompanionWindowVAO);
     glUseProgram(m_unCompanionWindowProgramID);
-
     // render left eye (first half of index array )
     glBindTexture(GL_TEXTURE_2D, leftEyeDesc.m_nResolveTextureId);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1727,59 +1898,86 @@ bool HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
 /* Check HMD, Controllers connection state */
 void HMD::checkConnection() {
     std::cout << "Maximum Number of Device that can be tracked: " << vr::k_unMaxTrackedDeviceCount << std::endl;
-
+    std::cout << "Number of tracker to find: " << trackerNum << std::endl;
     std::cout << "Please Connect Your HMD and two controllers to start this program" << std::endl;
 
     while (true) {
         int HMD_count = 0;
         int controller_count = 0;
-
-        for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){;
+        int tracker_count = 0;
+        for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){
             vr::ETrackedDeviceClass trackedStatus = VRSystem->GetTrackedDeviceClass(i);
             switch (int(trackedStatus)) {
             case 0:  continue;
-            case 1:
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_HMD:{
                 this->HMD_INDEX = i;
                 HMD_count += 1;
                 continue;
-            case 2: {
+            }
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_Controller: {
                 std::cout << "controller:   " << i << std::endl;
                 vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
                 if (controllerRole == 1) {
-                    std::cout << "controller:   " << i << "  Role: Left controller identified " << controllerRole << std::endl;
+                    std::cout << "Left controller identified! Left controller idx: " << i << std::endl;
                     this->LEFT_CONTROLLER_INDEX = i;
                 }
                 else if (controllerRole == 2) {
-                    std::cout << "controller:   " << i << "  Role: Right controller identified " << controllerRole << std::endl;
+                    std::cout << "Right controller identified! Right controller idx: " << i << std::endl;
                     this->RIGHT_CONTROLLER_INDEX = i;
                 }
                 controller_count += 1;
                 continue;
             }
-            case 3:  continue;
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{
+                std::cout << "Tracker " << tracker_count <<" identified! Idx is " << i << std::endl;
+                vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
+                vr::VRSystem()->GetStringTrackedDeviceProperty(i, vr::Prop_SerialNumber_String, serialNumber[tracker_count], sizeof(serialNumber));
+                printf("Serial Number = %s \n", serialNumber[tracker_count]);
+                this->TRACKER_INDEX[tracker_count] = i;
+                tracker_count += 1;
+                continue;
+            }
             case 4:  continue;
             case 5:  continue;
             }
         }
 
-        if (checkControllers && (HMD_count == 1 && controller_count == 2)) {
+        // Only use HMD
+        if (!checkControllers && !checkTrackers && HMD_count == 1) {
             break;
         }
-        if (!checkControllers && HMD_count == 1) {
+        // Use HMD+controllers
+        if (checkControllers && !checkTrackers && (HMD_count == 1 && controller_count == 2)) {
+            break;
+        }
+        // Use HMD+trackers
+        if (!checkControllers && checkTrackers && (HMD_count == 1 && tracker_count == trackerNum)) {
+            break;
+        }
+        // Use HMD++controllers+trackers
+        if (checkControllers && checkTrackers && (HMD_count == 1 && controller_count == 2 && tracker_count == trackerNum)) {
             break;
         }
     }
 
-    if (checkControllers) {
+    if (!checkControllers && !checkTrackers)
+    {
+        std::cout << "HMD is identified..." << std::endl;
+        std::cout << "All Specified Connection Identified.. Start VR system.." << std::endl;
+    }
+    else if(checkControllers && !checkTrackers) {
         std::cout << "One HMD and Two controllers are identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl << "LEFT CONTROLLER:  " << LEFT_CONTROLLER_INDEX << std::endl << "RIGHT CONTROLLER:  " << RIGHT_CONTROLLER_INDEX << std::endl;
+        std::cout << "Start VR system and ROS NODE" << std::endl;
+    }
+    else if(!checkControllers && checkTrackers) {
+        std::cout << "One HMD and " << trackerNum << " trackers are identified..." << std::endl;
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
     else {
-        std::cout << "HMD is identified..." << std::endl;
-        std::cout << "HMD INDEX:  " << HMD_INDEX << std::endl;
-        std::cout << "All Specified Connection Identified.. Start VR system.." << std::endl;
+        std::cout << "One HMD, Two controllers and "<<  trackerNum << " trackers are identified..." << std::endl;
+        std::cout << "Start VR system and ROS NODE" << std::endl;
     }
+
 }
 
 
@@ -1841,6 +2039,23 @@ Mat HMD::coordinate_z(Mat array){
     return  x_r_array;
 }
 
+Mat HMD::coordinate_robot(Mat array){
+
+    Mat local_coordinate_rotation;
+
+    local_coordinate_rotation << 0, -1, 0, 0,
+                0, 0, 1, 0,
+                -1, 0, 0, 0,
+                0, 0, 0, 1;
+    Mat vr_to_robot;
+    vr_to_robot << 0, 0, -1, 0,
+                -1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 0, 1;
+
+    return  vr_to_robot* array* local_coordinate_rotation;
+}
+
 Mat HMD::coordinate(Mat array) {
     Mat y_r;
     Mat x_r;
@@ -1868,34 +2083,77 @@ VR::matrix_3_4 HMD::makeTrackingmsg(_FLOAT array) {
     return msg;
 }
 void HMD::rosPublish() {
-    while (ros::ok()) {
+    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
 
-        VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
+    // HMD : Send only rotation parameters(euler or quarternion)
+    // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
 
-        // HMD : Send only rotation parameters(euler or quarternion)
-        // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
-
-         HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
-         HMD_world = map2array(refMatInv * HMD_curEig);
-         HMD_world_coord_change = map2array(coordinate(refMatInv * HMD_curEig));
-         HMD_worldEigInv = map2eigen(HMD_world).inverse();
-        if (checkControllers) {
-             LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-             RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-             HMD_LEFTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * LEFTCONTROLLER_curEig));
-             HMD_RIGHTCONTROLLER = map2array(coordinate_z(HMD_curEig.inverse() * RIGHTCONTROLLER_curEig));
+    HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    if (checkControllers) 
+    {
+        LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        LEFTCONTROLLER = map2array(coordinate_robot(LEFTCONTROLLER_curEig));
+        RIGHTCONTROLLER = map2array(coordinate_robot(RIGHTCONTROLLER_curEig));
+    }
+    if(checkTrackers){
+        for (int i=0; i<trackerNum; i++)
+        {
+            TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
+            HMD_TRACKER[i] = map2array(coordinate_robot(TRACKER_curEig[i]));
         }
-        if (pubPose) {
-            hmd_pub.publish(makeTrackingmsg(HMD_world_coord_change));
-            if (checkControllers) {
-                leftCon_pub.publish(makeTrackingmsg(HMD_LEFTCONTROLLER));
-                rightCon_pub.publish(makeTrackingmsg(HMD_RIGHTCONTROLLER));
+    }
+    if (pubPose) {
+        hmd_pub.publish(makeTrackingmsg(map2array(coordinate_robot(HMD_curEig))));
+        if (checkControllers) {
+            leftCon_pub.publish(makeTrackingmsg(LEFTCONTROLLER));
+            rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
+        }
+        if (checkTrackers){
+            allTrackersFine = true;
+            for (int i=0; i<trackerNum; i++)
+            {
+                allTrackersFine *= m_rTrackedDevicePose[TRACKER_INDEX[i]].bPoseIsValid;
+            }
+            allTrackersFineData.data = allTrackersFine;
+            tracker_status_pub.publish(allTrackersFineData);
+            if (allTrackersFine)
+            {
+                for (int i=0; i<trackerNum; i++)
+                {                
+                    if (std::string(serialNumber[i]) == "LHR-B979AA9E")
+                        tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
+                        tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-7330E069")
+                        tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-8C0A4142")
+                        tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
+                        tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    if (std::string(serialNumber[i]) == "LHR-5423DE85")
+                        tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                }
             }
         }
-
-        ros::spinOnce();
     }
-
 }
 
 
+  Vector3d HMD::rot2Euler(Matrix3f Rot)
+  {
+    double beta;
+    Eigen::Vector3d angle;
+    beta = -asin(Rot(2, 0));
+    double DEG2RAD = 3.14/180;
+    if (abs(beta) < 90 * DEG2RAD)
+      beta = beta;
+    else
+      beta = 180 * DEG2RAD - beta;
+
+    angle(0) = atan2(Rot(2, 1), Rot(2, 2) + 1E-37); //roll
+    angle(2) = atan2(Rot(1, 0), Rot(0, 0) + 1E-37); //pitch
+    angle(1) = beta;                                //yaw
+
+    return angle;
+  }

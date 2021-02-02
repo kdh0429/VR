@@ -1,4 +1,7 @@
 #include "render.h"
+#include "std_msgs/Bool.h"
+#include <mutex>
+#include <thread>
 
 
 #ifndef hmdHandler_h
@@ -90,8 +93,16 @@ public:
 	int argc_arg;
 	char** argv_arg;
 
-
-	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub;
+	
+	bool checkControllers = false;
+	bool checkTrackers = false;
+	bool allTrackersFine = true;
+	std_msgs::Bool allTrackersFineData;
+	static const uint32_t trackerNum = 6;
+	char serialNumber[trackerNum][15];
+	bool pubPose = false;
+	int loop_tick_ = 0;
+	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
 
 	//vr is  right-handed system
    // +y is up
@@ -102,21 +113,26 @@ public:
 	_FLOAT map2array(Mat eigen);
 	Mat map2eigen(float array[][4]);
 	Mat coordinate_z(Mat array);
+	Mat coordinate_robot(Mat array);
 	Mat coordinate(Mat array);
+	Vector3d rot2Euler(Matrix3f Rot);
 	VR::matrix_3_4 makeTrackingmsg(_FLOAT array);
 
 	Mat refMat, refMatInv;
 	Mat HMD_curEig;
+	Mat HMD_init;
+	bool hmd_init=false;
+	bool hmd_init_bool = false;
+	double yaw_angle;
 	_FLOAT HMD_world;
 	_FLOAT HMD_world_coord_change;
 	Mat LEFTCONTROLLER_curEig;
 	Mat RIGHTCONTROLLER_curEig;
-	_FLOAT HMD_LEFTCONTROLLER;
-	_FLOAT HMD_RIGHTCONTROLLER;
+	Mat TRACKER_curEig[trackerNum];
+	_FLOAT LEFTCONTROLLER;
+	_FLOAT RIGHTCONTROLLER;
+	_FLOAT HMD_TRACKER[trackerNum];
 	Mat HMD_worldEigInv;
-
-	bool checkControllers = false;
-	bool pubPose = false;
 
 /* streaming members */
 private:
@@ -148,7 +164,13 @@ private:
 public:
 	cv::Mat RvizScreen;
 	int Rviz_targetDim = 256;
-
+	
+	bool is_stream_process_finished {true};
+	bool first_data {true};
+	std::mutex render_mutex;
+	// std::mutex stream_packet_mutex;
+	std::shared_ptr<std_msgs::UInt8MultiArray> stored_stream_packet;
+	std::thread process_stream_thread;
 
 /* vr component members */
 public:
@@ -156,7 +178,7 @@ public:
 	vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
 	Matrix4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount];
 
-	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX;
+	vr::TrackedDeviceIndex_t HMD_INDEX, LEFT_CONTROLLER_INDEX, RIGHT_CONTROLLER_INDEX, TRACKER_INDEX[trackerNum];
 	vr::EVRInitError eError;
 	vr::IVRSystem* VRSystem;
 	vr::COpenVRContext vrContext;
@@ -168,10 +190,11 @@ public:
 	void ShutDown();
 
 	void RunMainLoop();
+	void RunRosLoop();
 	bool HandleInput();
 	void ProcessVREvent(const vr::VREvent_t& event);
-	
 
+	void ROSTasks();	
 /* vr Rendering members (OpenGL + OpenVR) */
 	bool BInitGL();
 	void RenderFrame();
@@ -262,15 +285,15 @@ public: // OpenGL book keeping
 	float m_fNearClip;
 	float m_fFarClip;
 
-	GLuint m_Texture[6];
+	GLuint m_Texture[7];
 	
 
-	unsigned int m_uiVertcount[6];
+	unsigned int m_uiVertcount[7];
 	
 
-	GLuint m_glSceneVertBuffer[6];
+	GLuint m_glSceneVertBuffer[7];
 
-	GLuint m_unSceneVAO[6];
+	GLuint m_unSceneVAO[7];
 
 
 

@@ -24,6 +24,14 @@
 #include "lodepng.h"
 #include "pathtools.h"
 
+#include "image_transport/image_transport.h"
+#include "cv_bridge/cv_bridge.h"
+#include "sensor_msgs/Image.h"
+#include <image_transport/subscriber_filter.h>
+#include "message_filters/subscriber.h"
+#include "message_filters/sync_policies/approximate_time.h"
+#include "message_filters/synchronizer.h"
+
 #include <glm/glm.hpp>
 #define _USE_MATH_DEFINES
 #include <math.h>

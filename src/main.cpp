@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hmdHandler.h"
-
+#include <thread>
 
 
 int main(int argc, char* argv[])
@@ -9,6 +9,14 @@ int main(int argc, char* argv[])
    
     HMD* hmdSystem = new HMD(argc, argv);
     hmdSystem->init();
+    
+    // std::thread threads[2];
+    // threads[0] = std::thread(&HMD::RunMainLoop,*hmdSystem);
+    // threads[1] = std::thread(&HMD::RunRosLoop,*hmdSystem);
+
+    // threads[0].join();
+    // threads[1].join();
+
     hmdSystem->RunMainLoop();
     
 
