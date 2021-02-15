@@ -46,7 +46,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = false;
+    checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -71,7 +71,6 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 {
-
     // viz_stream_mutex.
     // hmdPtr->loop_tick_++;
     // if(hmdPtr->loop_tick_%10 != 0){
@@ -82,9 +81,8 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     
     clock_t start, end;
-    start = clock();
     //::cout << streamPacket->layout.dim[4].label << std::endl;
-
+    start = clock();
 
     //std::cout << "test" << std::endl;
     // cout << streamPtr->ricohPacket.size << endl;
@@ -109,8 +107,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
         hmdPtr->streamParamInit = true;
     }
-
-
+    //start = clock();
     streamPtr->ricohPacket.size = streamPacket->layout.dim[3].size;
     int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
     if (left_len < 0 || !gotFrame) {
@@ -131,7 +128,8 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         hmdPtr->is_stream_process_finished = true;
         return;
     }
-    // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.05초 
+
+    //end = clock();
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
 
 
@@ -183,8 +181,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
-    //이 아래부터 끝까지 0.035초
-    
+    //start = clock();
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
@@ -206,28 +203,6 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
-    cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
-    cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
-    cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
-    cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
-    cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
-
-    cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
-    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
-    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
-
-
-//// left
     cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
     cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
     
@@ -247,7 +222,9 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
     cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
-//////
+
+    end = clock();
+    std::cout << "time" << (double) (end - start) / CLOCKS_PER_SEC << std::endl;
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
@@ -269,13 +246,6 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
     //cv::imshow("rviz", hmdPtr->RvizScreen);
-    end = clock();
-    double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time : " << time << std::endl;
-    std::cout << "fps : " << (double)1/time << std::endl;
-    std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
-    std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
-    //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
     hmdPtr->first_data = false;
     hmdPtr->is_stream_process_finished = true;
@@ -521,11 +491,9 @@ bool HMD::SetupTexturemaps()
         return false;
     }
     //std::cout << imageRGBA.size() << std::endl; 
-    for (int i = 0; i < 6; i++) {
-        glGenTextures(1, &m_Texture1[i]);
-        glGenTextures(1, &m_Texture2[i]);
-        glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
-        glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
+    for (int i = 0; i < 7; i++) {
+        glGenTextures(1, &m_Texture[i]);
+        glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
 
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, nImageWidth, nImageHeight,
@@ -687,7 +655,7 @@ void HMD::SetupScene()
     }
 
     std::vector<std::vector<float>> vertdataarrays;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         std::vector<float> array;
         vertdataarrays.push_back(array);
     }
@@ -702,7 +670,7 @@ void HMD::SetupScene()
 
     
     
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
 
         Matrix4 mat = matScale * matTransform;
 
@@ -838,8 +806,6 @@ bool HMD::SetupStereoRenderTargets()
         return false;
     }
     VRSystem->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
-    // m_nRenderWidth = 1440;
-    // m_nRenderHeight = 1660;
 
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, leftEyeDesc);
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, rightEyeDesc);
@@ -866,7 +832,7 @@ void HMD::SetupCompanionWindow()
     vVerts.push_back(VertexDataWindow(Vector2(0, 1), Vector2(0, 0)));
     vVerts.push_back(VertexDataWindow(Vector2(1, 1), Vector2(1, 0)));
 
-    GLushort vIndices[] = { 0, 1, 3,   0, 3, 2,   4, 5, 7,   4, 7, 6 }; //four triangles
+    GLushort vIndices[] = { 0, 1, 3,   0, 3, 2,   4, 5, 7,   4, 7, 6 };
     m_uiCompanionWindowIndexSize = _countof(vIndices);
 
     glGenVertexArrays(1, &m_unCompanionWindowVAO);
@@ -954,8 +920,7 @@ void HMD::ProcessVREvent(const vr::VREvent_t& event)
 }
 
 RenderModel* HMD::FindOrLoadRenderModel(const char* pchRenderModelName)
-{   
-    /// ros_warn 했는데 출력이 안됨.
+{
     RenderModel* pRenderModel = NULL;
     for (std::vector< RenderModel* >::iterator i = m_vecRenderModels.begin(); i != m_vecRenderModels.end(); i++)
     {
@@ -1056,6 +1021,7 @@ bool HMD::HandleInput()
             }
         }
     }
+
     // Process SteamVR events
     vr::VREvent_t event;
     while (VRSystem->PollNextEvent(&event, sizeof(event)))
@@ -1127,8 +1093,7 @@ bool HMD::HandleInput()
                 std::string sRenderModelName = GetTrackedDeviceString(originInfo.trackedDeviceIndex, vr::Prop_RenderModelName_String);
                 if (sRenderModelName != m_rHand[eHand].m_sRenderModelName)
                 {
-
-                    //m_rHand[eHand].m_pRenderModel = FindOrLoadRenderModel(sRenderModelName.c_str()); 없어도 잘 돌아감.
+                    m_rHand[eHand].m_pRenderModel = FindOrLoadRenderModel(sRenderModelName.c_str());
                     m_rHand[eHand].m_sRenderModelName = sRenderModelName;
                 }
             }
@@ -1318,7 +1283,7 @@ void HMD::ROSTasks()
 }
 
 void HMD::RunMainLoop()
-{   
+{
     bool bQuit = false;
 
     SDL_StartTextInput();
@@ -1330,7 +1295,6 @@ void HMD::RunMainLoop()
     {
         bQuit = HandleInput();
         RenderFrame();
-
     }
 
     t.join();
@@ -1375,19 +1339,18 @@ void HMD::RenderFrame()
     ros::Rate r(30);
     while (ros::ok())
     {
-        // clock_t start, end;
-        // start=clock();
         r.sleep();
         // for now as fast as possible
         
-        if (first_data) //// 없어도 작동함.
+        if (first_data)
         {
             continue;
         }
 
         render_mutex.lock();
-        for (int i = 0; i < 6; i++) {
-            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
+        for (int i = 0; i < 7; i++) {
+            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
+        
             switch (i) {
             case 0:
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
@@ -1413,6 +1376,9 @@ void HMD::RenderFrame()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
                 break;
+            case 6:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RvizScreen.cols, RvizScreen.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RvizScreen.data[0]);
             }
             
             glGenerateMipmap(GL_TEXTURE_2D);
@@ -1429,55 +1395,9 @@ void HMD::RenderFrame()
             glBindTexture(GL_TEXTURE_2D, 0);
 
         }
-
-/////////////////////////////////right/////////////////
-        for (int i = 0; i < 6; i++) {
-            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
-            switch (i) {
-            case 0:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeFront.cols, RightcubeFront.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeFront.data[0]);
-                break;
-            case 1:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBack.cols, RightcubeBack.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBack.data[0]);
-                break;
-            case 2:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeTop.cols, RightcubeTop.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeTop.data[0]);
-                break;
-            case 3:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBottom.cols, RightcubeBottom.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBottom.data[0]);
-                break;
-            case 4:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeLeft.cols, RightcubeLeft.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeLeft.data[0]);
-                break;
-            case 5:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeRight.cols, RightcubeRight.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeRight.data[0]);
-                break;
-            }
-            
-            glGenerateMipmap(GL_TEXTURE_2D);
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-            GLfloat fLargest;
-            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
-
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-        }
-        //////////////////////////////////////////////
 
         if (VRSystem)
-        {   
+        {
             RenderControllerAxes();
             RenderStereoTargets();
             //RenderCompanionWindow();
@@ -1486,9 +1406,7 @@ void HMD::RenderFrame()
             vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
             vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
             vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
-            // end = clock();
-            // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-            // std::cout << "real real time : " << time << std::endl;
+            
         }
 
         if (m_bVblank && m_bGlFinishHack)
@@ -1533,7 +1451,7 @@ void HMD::RenderFrame()
 
         render_mutex.unlock();  
     }
-
+    
 }
 
 void HMD::UpdateHMDMatrixPose()
@@ -1690,14 +1608,14 @@ Matrix4 HMD::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
     {
         matMVP = m_mat4ProjectionRight * m_mat4eyePosRight * m_mat4HMDPose;
     }
-    //matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
+
     return matMVP;
 }
 
 
 
 /* Render scene respect to each eye */
-void HMD::RenderScene1(vr::Hmd_Eye nEye)
+void HMD::RenderScene(vr::Hmd_Eye nEye)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -1706,15 +1624,12 @@ void HMD::RenderScene1(vr::Hmd_Eye nEye)
     {
         glUseProgram(m_unSceneProgramID);
         glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        // 7 -> 6로 변경. 
-        ///여기 지우면 안나옴.
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 7; i++) {
             glBindVertexArray(m_unSceneVAO[i]);
-            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
+            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
             glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
             glBindVertexArray(0);
         }
-        ///
     }
 
     bool bIsInputAvailable = VRSystem->IsInputAvailable();
@@ -1732,85 +1647,30 @@ void HMD::RenderScene1(vr::Hmd_Eye nEye)
     // ----- Render Model rendering -----
     glUseProgram(m_unRenderModelProgramID);
 
-    // for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
-    // {
-    //     if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
-    //         continue;
-
-    //     const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
-    //     Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
-    //     glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
-
-    //     m_rHand[eHand].m_pRenderModel->Draw();
-    // }
-    // 의미 없음.
-    glUseProgram(0);
-}
-
-//////////////////////////////////////right//////////
-void HMD::RenderScene2(vr::Hmd_Eye nEye)
-{
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    
-    if (m_bShowCubes)
+    for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
     {
-        glUseProgram(m_unSceneProgramID);
-        glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        
-        ///여기 지우면 안나옴.
-        for (int i = 0; i < 6; i++) {
-            glBindVertexArray(m_unSceneVAO[i]);
-            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
-            glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
-            glBindVertexArray(0);
-        }
-        ///
+        if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
+            continue;
+
+        const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
+        Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
+        glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
+
+        m_rHand[eHand].m_pRenderModel->Draw();
     }
 
-    bool bIsInputAvailable = VRSystem->IsInputAvailable();
-
-    if (bIsInputAvailable)
-    {
-        // draw the controller axis lines
-        glUseProgram(m_unControllerTransformProgramID);
-        glUniformMatrix4fv(m_nControllerMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        glBindVertexArray(m_unControllerVAO);
-        glDrawArrays(GL_LINES, 0, m_uiControllerVertcount);
-        glBindVertexArray(0);
-    }
-
-    // ----- Render Model rendering -----
-    glUseProgram(m_unRenderModelProgramID);
-
-    // for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
-    // {
-    //     if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
-    //         continue;
-
-    //     const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
-    //     Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
-    //     glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
-
-    //     m_rHand[eHand].m_pRenderModel->Draw();
-    // }
-    //의미 없음.
     glUseProgram(0);
 }
-/////////////////////////////////////////////////
-
-
 
 void HMD::RenderStereoTargets()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
     glEnable(GL_MULTISAMPLE);
-    
+
     // Left Eye
     glBindFramebuffer(GL_FRAMEBUFFER, leftEyeDesc.m_nRenderFramebufferId);
     glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
-    RenderScene1(vr::Eye_Left);   //없으면 왼쪽눈 render 안됨.
+    RenderScene(vr::Eye_Left);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glDisable(GL_MULTISAMPLE);
@@ -1825,14 +1685,12 @@ void HMD::RenderStereoTargets()
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-
-
     glEnable(GL_MULTISAMPLE);
 
     // Right Eye
     glBindFramebuffer(GL_FRAMEBUFFER, rightEyeDesc.m_nRenderFramebufferId);
     glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
-    RenderScene2(vr::Eye_Right);
+    RenderScene(vr::Eye_Right);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glDisable(GL_MULTISAMPLE);

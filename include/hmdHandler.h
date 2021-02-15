@@ -210,8 +210,10 @@ public:
 	bool SetupStereoRenderTargets();
 	void SetupCompanionWindow();
 	void SetupCameras();
-	void RenderScene(vr::Hmd_Eye nEye);
+	void RenderScene1(vr::Hmd_Eye nEye);
+	void RenderScene2(vr::Hmd_Eye nEye);
 	void RenderStereoTargets();
+
 
 	void RenderCompanionWindow();
 	
@@ -285,15 +287,15 @@ public: // OpenGL book keeping
 	float m_fNearClip;
 	float m_fFarClip;
 
-	GLuint m_Texture[7];
+	GLuint m_Texture1[6];
+	GLuint m_Texture2[6];
+
+	unsigned int m_uiVertcount[6];
 	
 
-	unsigned int m_uiVertcount[7];
-	
+	GLuint m_glSceneVertBuffer[6];
 
-	GLuint m_glSceneVertBuffer[7];
-
-	GLuint m_unSceneVAO[7];
+	GLuint m_unSceneVAO[6];
 
 
 
