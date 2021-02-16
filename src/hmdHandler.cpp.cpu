@@ -82,14 +82,14 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     
     clock_t start, end;
-    
+    start = clock();
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
     //std::cout << "test" << std::endl;
     // cout << streamPtr->ricohPacket.size << endl;
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
-    start = clock();
+
     streamPtr->ricohPacket.data = (uint8_t*)&(streamPacket->data[0]);
     int gotFrame = 0;
 
@@ -110,10 +110,6 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         hmdPtr->streamParamInit = true;
     }
 
-    // end = clock();
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 1111 : " << time << std::endl;
-    // start = clock();
 
     streamPtr->ricohPacket.size = streamPacket->layout.dim[3].size;
     int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
@@ -128,18 +124,8 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     streamPtr->ricohPacket.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
     
     // stream_packet_mutex.unlock();
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 2222 : " << time << std::endl;
-    // start = clock();
-
-
+    
     int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket));
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 3333 : " << time << std::endl;
-    // start = clock();
-
     if (right_len < 0 || !gotFrame) {
         std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
         hmdPtr->is_stream_process_finished = true;
@@ -197,12 +183,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
-
-
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 4444 : " << time << std::endl;
-
+    //이 아래부터 끝까지 0.035초
     
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
@@ -217,12 +198,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1);
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1);
     RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
-    // end = clock();
 
-    // createcubemapface를 다 실행하는데 0.026초
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 5555 : " << time << std::endl;
-    // start = clock();
     
     //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
     //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
@@ -271,14 +247,14 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
     cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
-////// cv::flip 등등을 하는데 0.007초
+//////
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
     //cv::resize(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
     //cv::imshow("left equirect", hmdPtr->leftCvEquirect);
     //cv::imshow("right equirect", hmdPtr->rightCvEquirect);
-    
+
 
    
    /* cv::imshow("LEFT back face", hmdPtr->LeftcubeBack);
@@ -295,7 +271,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     //cv::imshow("rviz", hmdPtr->RvizScreen);
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time 66666 : " << time << std::endl;
+    std::cout << "time : " << time << std::endl;
     std::cout << "fps : " << (double)1/time << std::endl;
     std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
     std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
@@ -1172,23 +1148,8 @@ void HMD::init() {
     ros::NodeHandle node;
     // ros::AsyncSpinner spinner(0);
     // spinner.start();
-
-    // CUDA test
-    /////////////////
     std::cout << cv::getBuildInformation() << std::endl;
-
-    cv::Mat src_img = cv::imread("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png",0);
-    cv::cuda::GpuMat gpu_img;
-    gpu_img.upload(src_img); //upload src_img (in ram) to gpu_img (in gpu)
-
-    cv::Size size_img_gpu = src_img.size();
-    cv::cuda::GpuMat gpu_img_rot;
-    cv::cuda::rotate(gpu_img, gpu_img_rot, cv::Size(size_img_gpu.height, size_img_gpu.width), -90, size_img_gpu.height-1, 0, cv::INTER_LINEAR);
-    gpu_img_rot.download(src_img); //download gpu_img_rot (in gpu) to src_img(overwrite, ram)
-    cv::imshow("hello", src_img);
-    cv::waitKey(3000);
-    /////////////////
-
+    //cv::waitKey(1);
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);

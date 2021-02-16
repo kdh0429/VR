@@ -15,7 +15,11 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
-find_package( OpenCV REQUIRED )
+find_package( OpenCV REQUIRED
+  NO_MODULE
+  PATHS C:/Users/Dyros/cv/opencv-3.4.13/build2
+  NO_DEFAULT_PATH
+)
 add_message_files(
 	FILES
 	matrix_3_4.msg

@@ -11,6 +11,15 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+
+
+// Added after opencv reinstall
+#include <opencv2/core/types.hpp>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudawarping.hpp>
+
+
+
 #include <Eigen/Dense>
 #include <boost/bind.hpp>
 #include "ros/ros.h"
