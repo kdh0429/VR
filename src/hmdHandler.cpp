@@ -183,7 +183,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
-    //이 아래부터 끝까지 0.035초
+    // createcubemapface 0.028초 소요
     
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
     LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
@@ -206,6 +206,8 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
+    
+    //cv::flip등의 처리 0.007초 소요
     cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
     cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
     
@@ -756,7 +758,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-
+    std::cout << mat.m << std::endl;
+    std::cout << mat.m[0] << std::endl;
+    std::cout << mat.m[1] << std::endl;
+    std::cout << mat.m[2] << std::endl;
+    std::cout << mat.m[3] << std::endl;
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -773,6 +779,12 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
+    std::cout << matEyeRight.m << std::endl;
+    std::cout << matEyeRight.m[0] << std::endl;
+    std::cout << matEyeRight.m[1] << std::endl;
+    std::cout << matEyeRight.m[2] << std::endl;
+    std::cout << matEyeRight.m[3] << std::endl;
+       
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
