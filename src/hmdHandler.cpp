@@ -758,11 +758,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-    std::cout << mat.m << std::endl;
-    std::cout << mat.m[0] << std::endl;
-    std::cout << mat.m[1] << std::endl;
-    std::cout << mat.m[2] << std::endl;
-    std::cout << mat.m[3] << std::endl;
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 3 ; j++){
+            std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+        }
+    }
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -779,11 +779,12 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
-    std::cout << matEyeRight.m << std::endl;
-    std::cout << matEyeRight.m[0] << std::endl;
-    std::cout << matEyeRight.m[1] << std::endl;
-    std::cout << matEyeRight.m[2] << std::endl;
-    std::cout << matEyeRight.m[3] << std::endl;
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 3 ; j++){
+            std::cout << "matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+        }
+    }
+
        
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
@@ -795,6 +796,46 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
     return matrixObj.invert();
 }
 
+
+/*
+mat.m00 : 0.77164
+mat.m01 : 0
+mat.m02 : -0.18781
+mat.m10 : 0
+mat.m11 : 0.709185
+mat.m12 : 0.00246117
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m00 : 0.771024
+mat.m01 : 0
+mat.m02 : 0.187732
+mat.m10 : 0
+mat.m11 : 0.708744
+mat.m12 : 0.00221074
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+
+*/
 
 void HMD::SetupCameras()
 {

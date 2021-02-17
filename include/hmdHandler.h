@@ -154,7 +154,7 @@ public:
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
-	int targetDim = 512;
+	int targetDim = 1024; // 이 숫자에 따라 fps 달라짐
 	MapCoord LEFT_MAP_COORDS[CubeFaceName::NumFaces];
 	MapCoord RIGHT_MAP_COORDS[CubeFaceName::NumFaces];
 
