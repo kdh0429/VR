@@ -780,7 +780,15 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
+<<<<<<< Updated upstream
 
+=======
+    for (int i =0; i<4 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+        }
+    }
+>>>>>>> Stashed changes
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -797,6 +805,17 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
+<<<<<<< Updated upstream
+=======
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << "matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+        }
+    }
+    if (nEye == vr::Eye_Left) matEyeRight.m[0][3]=-0.0f;  // 눈 사이의 거리
+    else matEyeRight.m[0][3]=0.0f;  // 눈 사이의 거리
+       
+>>>>>>> Stashed changes
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -1285,8 +1304,8 @@ void HMD::init() {
     m_fScale = 5.0f;
     m_fScaleSpacing = 0.0f;
 
-    m_fNearClip = 0.1f;
-    m_fFarClip = 30.0f;
+    m_fNearClip = 0.01f;
+    m_fFarClip = 20.0f;
 
 
     /* Window Creation Process End */
