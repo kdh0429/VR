@@ -759,7 +759,7 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
     for (int i =0; i<3 ; i++){
-        for (int j = 0; j < 3 ; j++){
+        for (int j = 0; j < 4 ; j++){
             std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
         }
     }
@@ -779,8 +779,8 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
-    for (int i =0; i<3 ; i++){
-        for (int j = 0; j < 3 ; j++){
+    for (int i =0; i<4 ; i++){
+        for (int j = 0; j < 4 ; j++){
             std::cout << "matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
         }
     }
@@ -834,6 +834,65 @@ matEyeRight.m12 : 0
 matEyeRight.m20 : 0
 matEyeRight.m21 : 0
 matEyeRight.m22 : 1
+
+
+
+mat.m00 : 0.77164
+mat.m01 : 0
+mat.m02 : -0.18781
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.709185
+mat.m12 : 0.00246117
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+mat.m00 : 0.771024
+mat.m01 : 0
+mat.m02 : 0.187732
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.708744
+mat.m12 : 0.00221074
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : -0.035
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+matEyeRight.m30 : -1.86849e+35
+matEyeRight.m31 : 5.46506e-44
+matEyeRight.m32 : -1.49348e+19
+matEyeRight.m33 : 4.59051e-41
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : 0.035
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+matEyeRight.m30 : 1
+matEyeRight.m31 : 0
+matEyeRight.m32 : 0
+matEyeRight.m33 : 0
 
 */
 
