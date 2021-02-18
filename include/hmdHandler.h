@@ -2,7 +2,8 @@
 #include "std_msgs/Bool.h"
 #include <mutex>
 #include <thread>
-
+#include <vector>
+#include <std_msgs/Float32MultiArray.h>
 
 #ifndef hmdHandler_h
 #define hmdHandler_h
@@ -87,7 +88,7 @@ public:
 /* HMD, Controllers members */
 public:
 	void rosPublish();
-
+	void hmd_para_callback(const std_msgs::Float32MultiArray data);
 
 public:
 	int argc_arg;
@@ -139,6 +140,7 @@ private:
 
 	ricohRos streamObj;
 	ros::Subscriber ricoh_sub;
+	ros::Subscriber hmd_para_sub;
 public:
 	int width = -1;
 	int height = -1;
@@ -150,7 +152,7 @@ public:
 	
 	std::string faceNameToString(CubeFaceName faceName);
 	int faceNameToInteger(CubeFaceName faceName);
-	bool createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo);
+	void createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo);
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
@@ -164,8 +166,9 @@ private:
 public:
 	cv::Mat RvizScreen;
 	int Rviz_targetDim = 256;
-	
 	bool is_stream_process_finished {true};
+	bool is_stream_process_finished_l {true};
+	bool is_stream_process_finished_r {true};
 	bool first_data {true};
 	std::mutex render_mutex;
 	// std::mutex stream_packet_mutex;
@@ -219,7 +222,7 @@ public:
 	
 
 	Matrix4 GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye);
-	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye);
+	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance);
 	Matrix4 GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye);
 	void UpdateHMDMatrixPose();
 

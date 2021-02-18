@@ -6,7 +6,8 @@
 using namespace std;
 
 ricohRos::ricohRos() :ricohContext(NULL) {
-		av_init_packet(&ricohPacket);
+		av_init_packet(&ricohPacket_l);
+		av_init_packet(&ricohPacket_r);
 		avcodec_register_all();
 		av_log_set_level(AV_LOG_FATAL);
 		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -20,6 +21,7 @@ ricohRos::ricohRos() :ricohContext(NULL) {
 			cout << "cannot open codec" << endl;
 			return;
 		}
+		c->thread_count = 6;
 		ricohleftFrame = av_frame_alloc();
 		ricohrightFrame = av_frame_alloc();
 }

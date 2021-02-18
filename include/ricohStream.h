@@ -26,7 +26,8 @@ class ricohRos {
 		AVFrame* ricohleftFrame;
 		AVFrame* ricohrightFrame;
 
-		AVPacket ricohPacket;
+		AVPacket ricohPacket_l;
+		AVPacket ricohPacket_r;
 
 };
 
