@@ -69,6 +69,60 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 }
 
+
+
+//cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
+void createCubeMapFace_left_thread(HMD* hmdPtr)
+{
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
+
+}
+void createCubeMapFace_right_thread(HMD* hmdPtr)
+{
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
+
+}
+
+void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
+{
+    float depth, distance,distance_cali;
+    depth = data.data[0];
+    distance = data.data[1]; // 0~1
+    distance_cali = -0.15 + distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // 가장 정확 할 때에는 distance_cali 가 0일 때
+    HMD::m_mat4eyePosLeft = HMD::GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali);
+    HMD::m_mat4eyePosRight =HMD::GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali);
+}
+
+void decode_thread_l(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
+{
+    int left_len = avcodec_decode_video2(streamPtr->c_l, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    if (left_len < 0 || !gotFrame) {
+        std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished_l = true;
+        return; 
+    }
+}
+void decode_thread_r(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
+{
+    int right_len = avcodec_decode_video2(streamPtr->c_r, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    if (right_len < 0 || !gotFrame) {
+        std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished_r = true;
+        return;
+    }
+}
+
+
 void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 {
 
@@ -82,17 +136,17 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     
     clock_t start, end;
-    
+    start = clock();
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
     //std::cout << "test" << std::endl;
     // cout << streamPtr->ricohPacket.size << endl;
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
-    start = clock();
-    streamPtr->ricohPacket.data = (uint8_t*)&(streamPacket->data[0]);
-    int gotFrame = 0;
 
+    
+    int gotFrame_l = 0, gotFrame_r = 0;
+    
     // std::scoped_lock<std::mutex> _(hmdPtr->render_mutex);
     // hmdPtr->render_mutex.lock
     if (!(hmdPtr->streamParamInit)) {
@@ -110,41 +164,43 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         hmdPtr->streamParamInit = true;
     }
 
-    // end = clock();
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 1111 : " << time << std::endl;
-    // start = clock();
+    streamPtr->ricohPacket_l.data = (uint8_t*)&(streamPacket->data[0]);
+    streamPtr->ricohPacket_l.size = streamPacket->layout.dim[3].size;
+    
+    // int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    // if (left_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_l = true;
+    //     return;
+    // }
 
-    streamPtr->ricohPacket.size = streamPacket->layout.dim[3].size;
-    int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
-    if (left_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
-    gotFrame = 0;
+    //gotFrame = 0;
 
-    streamPtr->ricohPacket.size = streamPacket->layout.dim[4].size;
-    streamPtr->ricohPacket.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    streamPtr->ricohPacket_r.size = streamPacket->layout.dim[4].size;
+    streamPtr->ricohPacket_r.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    std::thread t1(decode_thread_l,streamPtr, hmdPtr,gotFrame_l);
+    std::thread t2(decode_thread_r,streamPtr, hmdPtr,gotFrame_r);
+    t1.join();
+    t2.join();
+    
+    // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    // if (right_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_r = true;
+    //     return;
+    // }
+
+    // std::thread decode_thread_l(decode_thread_func_l,streamPtr,hmdPtr,streamPacket,gotFrame_l,left_len);
+    // std::thread decode_thread_r(decode_thread_func_r,streamPtr,hmdPtr,streamPacket,gotFrame_r,right_len);
+
+    // decode_thread_l.join();
+    // decode_thread_r.join();
+
+    // int gotFrame = gotFrame_l * gotFrame_r;
     
     // stream_packet_mutex.unlock();
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 2222 : " << time << std::endl;
-    // start = clock();
-
-
-    int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket));
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 3333 : " << time << std::endl;
-    // start = clock();
-
-    if (right_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
+    
+    
     // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.05초 
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
 
@@ -159,11 +215,11 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
 
 
-    if (left_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
+    // if (left_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished = true;
+    //     return;
+    // }
 
     hmdPtr->left_Pixfmt = (enum AVPixelFormat)streamPtr->ricohleftFrame->format;
     hmdPtr->right_Pixfmt = (enum AVPixelFormat)streamPtr->ricohrightFrame->format;
@@ -198,26 +254,21 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool RightconversionSuccess = true;
 
 
+    // start = clock();
+
+    std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
+    std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
+    
+    // createcubemapface 0.028초 소요
+    //cube_threads.clear();
+    
+    left_cube.join();
+    right_cube.join();
 
     // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 4444 : " << time << std::endl;
-    std::thread cube_threads[12];
-    
-    
-    cube_threads[0] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0};
-    cube_threads[1] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0};
-    cube_threads[2] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0};
-    cube_threads[3] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0};
-    cube_threads[4] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0};
-    cube_threads[5] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0};
-    cube_threads[6] =std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1};
-    cube_threads[7] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1};
-    cube_threads[8] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1};
-    cube_threads[9] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1};
-    cube_threads[10] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1};
-    cube_threads[11] = std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1};
-
+    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    // std::cout << "time(createcube) : " << time << std::endl;
+    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0});
@@ -230,15 +281,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1});
-    
-    for (auto i = 0; i<12 ; i++) cube_threads[i].join();
-    //for (auto &tmp : cube_threads) tmp.join();
-    // end = clock();
 
-    // createcubemapface를 다 실행하는데 0.026초
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time 5555 : " << time << std::endl;
-    // start = clock();
+    //for (auto &tmp : cube_threads) tmp.join();
+    
+
     
     //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
     //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
@@ -246,6 +292,8 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
+    
+    //cv::flip등의 처리 0.007초 소요
     cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
     cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
     
@@ -287,14 +335,14 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
     cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
-////// cv::flip 등등을 하는데 0.007초
+//////
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
     //cv::resize(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
     //cv::imshow("left equirect", hmdPtr->leftCvEquirect);
     //cv::imshow("right equirect", hmdPtr->rightCvEquirect);
-    
+
 
    
    /* cv::imshow("LEFT back face", hmdPtr->LeftcubeBack);
@@ -311,7 +359,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     //cv::imshow("rviz", hmdPtr->RvizScreen);
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time 66666 : " << time << std::endl;
+    std::cout << "time : " << time << std::endl;
     std::cout << "fps : " << (double)1/time << std::endl;
     std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
     std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
@@ -320,22 +368,17 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     hmdPtr->first_data = false;
     hmdPtr->is_stream_process_finished = true;
 }
+
+
 void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) 
 {
-    if (hmdPtr->is_stream_process_finished)
-    {
-        if (hmdPtr->process_stream_thread.joinable())
-        {
-            hmdPtr->process_stream_thread.join();
-        }
-        hmdPtr->is_stream_process_finished = false;
-        hmdPtr->stored_stream_packet = std::make_shared<std_msgs::UInt8MultiArray>(*streamPacket);
-        // streamCallbackBackground( streamPtr, hmdPtr);
-        hmdPtr->process_stream_thread = std::thread(streamCallbackBackground, streamPtr, hmdPtr);
+    if (subCallbackFlag == false)
+    {   
+        subCallbackFlag = true;
     }
     else
     {
-        ROS_WARN("stream data is not processed yet");
+        //ROS_WARN("stream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -796,7 +839,6 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-
     for (int i =0; i<4 ; i++){
         for (int j = 0; j < 4 ; j++){
             std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
@@ -810,7 +852,7 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
     );
 }
 
-Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
+Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance = 0.0)
 {
     if (!VRSystem)
     {
@@ -823,10 +865,10 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
             std::cout << "matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
         }
     }
-    if (nEye == vr::Eye_Left) matEyeRight.m[0][3]=-0.0f;  // 눈 사이의 거리
-    else matEyeRight.m[0][3]=0.0f;  // 눈 사이의 거리
+    if (nEye == vr::Eye_Left) matEyeRight.m[0][3]=-eye_distance; //  눈 사이 거리
+    else matEyeRight.m[0][3]=eye_distance;
        
-Matrix4 matrixObj(
+    Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
         matEyeRight.m[0][2], matEyeRight.m[1][2], matEyeRight.m[2][2], 0.0,
@@ -837,12 +879,74 @@ Matrix4 matrixObj(
 }
 
 
+/*
+projection
+left
+mat.m00 : 0.77164
+mat.m01 : 0
+mat.m02 : -0.18781
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.709185
+mat.m12 : 0.00246117
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+
+right
+mat.m00 : 0.771024
+mat.m01 : 0
+mat.m02 : 0.187732
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.708744
+mat.m12 : 0.00221074
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+
+pose
+left
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : -0.035 // 눈 사이 거리??
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+
+right
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : 0.035
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+
+
+*/
+
 void HMD::SetupCameras()
 {
     m_mat4ProjectionLeft = GetHMDMatrixProjectionEye(vr::Eye_Left);
     m_mat4ProjectionRight = GetHMDMatrixProjectionEye(vr::Eye_Right);
-    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left);
-    m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right);
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left,0.0f);
+    m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right, 0.0f);
 }
 
 
@@ -1201,23 +1305,6 @@ void HMD::init() {
     ros::NodeHandle node;
     // ros::AsyncSpinner spinner(0);
     // spinner.start();
-
-    // CUDA test
-    /////////////////
-    std::cout << cv::getBuildInformation() << std::endl;
-
-    cv::Mat src_img = cv::imread("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png",0);
-    cv::cuda::GpuMat gpu_img;
-    gpu_img.upload(src_img); //upload src_img (in ram) to gpu_img (in gpu)
-
-    cv::Size size_img_gpu = src_img.size();
-    cv::cuda::GpuMat gpu_img_rot;
-    cv::cuda::rotate(gpu_img, gpu_img_rot, cv::Size(size_img_gpu.height, size_img_gpu.width), -90, size_img_gpu.height-1, 0, cv::INTER_LINEAR);
-    gpu_img_rot.download(src_img); //download gpu_img_rot (in gpu) to src_img(overwrite, ram)
-    cv::imshow("hello", src_img);
-    cv::waitKey(3000);
-    /////////////////
-
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
@@ -1313,9 +1400,10 @@ void HMD::init() {
 
     m_fScale = 5.0f;
     m_fScaleSpacing = 0.0f;
+    
 
-    m_fNearClip = 0.01f;
-    m_fFarClip = 20.0f;
+    m_fNearClip = 1.0f;//0.1f; //깊이감?
+    m_fFarClip = 30.0f; 
 
 
     /* Window Creation Process End */
@@ -1349,9 +1437,10 @@ void HMD::init() {
     ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
                                                             1, 
                                                             boost::bind(streamCallback, _1, &streamObj, this));
-                                                            // ros::TransportHints().udp());
-
-    //image_transport::ImageTransport it(node);
+                                                            //ros::TransportHints().udp());
+    hmd_para_sub = node.subscribe("/tocabi/dg/vr_caliabration_param", 10, &HMD::hmd_para_callback, this);
+   
+    // //image_transport::ImageTransport it(node);
     //image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
 
     vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str());
@@ -1447,14 +1536,17 @@ void HMD::RenderFrame()
     {
         // clock_t start, end;
         // start=clock();
-        r.sleep();
+        //r.sleep();
         // for now as fast as possible
         
         if (first_data) //// 없어도 작동함.
         {
             continue;
         }
-
+        if(subCallbackFlag == false){
+            continue;
+        }
+        
         render_mutex.lock();
         for (int i = 0; i < 6; i++) {
             glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
@@ -1977,7 +2069,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     // we have to enforce input image dimensions to be equirectangular
     if (in.size().height != in.size().width / 2)
     {
-        return;
+        return ;
     }
     MapCoord* MAP_COORDS;
     if(stereo == 0)   MAP_COORDS = &LEFT_MAP_COORDS[0];
@@ -2099,7 +2191,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     // run actual resampling using OpenCV's remap
     cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], CV_INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
-    return;
+    return ;
 }
 
 

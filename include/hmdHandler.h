@@ -104,6 +104,7 @@ public:
 	bool pubPose = false;
 	int loop_tick_ = 0;
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
+	bool subCallbackFlag = false;
 
 	//vr is  right-handed system
    // +y is up

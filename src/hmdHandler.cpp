@@ -105,16 +105,16 @@ void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
 
 void decode_thread_l(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
 {
-    int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    int left_len = avcodec_decode_video2(streamPtr->c_l, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
     if (left_len < 0 || !gotFrame) {
         std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
         hmdPtr->is_stream_process_finished_l = true;
-        return;
+        return; 
     }
 }
 void decode_thread_r(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
 {
-    int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    int right_len = avcodec_decode_video2(streamPtr->c_r, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
     if (right_len < 0 || !gotFrame) {
         std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
         hmdPtr->is_stream_process_finished_r = true;
@@ -145,7 +145,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
 
     
-    int gotFrame = 0;
+    int gotFrame_l = 0, gotFrame_r = 0;
     
     // std::scoped_lock<std::mutex> _(hmdPtr->render_mutex);
     // hmdPtr->render_mutex.lock
@@ -167,24 +167,28 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     streamPtr->ricohPacket_l.data = (uint8_t*)&(streamPacket->data[0]);
     streamPtr->ricohPacket_l.size = streamPacket->layout.dim[3].size;
     
-    int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
-    if (left_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished_l = true;
-        return;
-    }
+    // int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    // if (left_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_l = true;
+    //     return;
+    // }
 
-    gotFrame = 0;
+    //gotFrame = 0;
 
     streamPtr->ricohPacket_r.size = streamPacket->layout.dim[4].size;
     streamPtr->ricohPacket_r.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    std::thread t1(decode_thread_l,streamPtr, hmdPtr,gotFrame_l);
+    std::thread t2(decode_thread_r,streamPtr, hmdPtr,gotFrame_r);
+    t1.join();
+    t2.join();
     
-    int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
-    if (right_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished_r = true;
-        return;
-    }
+    // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    // if (right_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_r = true;
+    //     return;
+    // }
 
     // std::thread decode_thread_l(decode_thread_func_l,streamPtr,hmdPtr,streamPacket,gotFrame_l,left_len);
     // std::thread decode_thread_r(decode_thread_func_r,streamPtr,hmdPtr,streamPacket,gotFrame_r,right_len);
@@ -2189,7 +2193,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // run actual resampling using OpenCV's remap
-    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], CV_INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
     return ;
 }

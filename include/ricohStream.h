@@ -22,7 +22,8 @@ class ricohRos {
 		SwsContext* ricohContext = NULL;
 
 		AVCodec* codec;
-		AVCodecContext* c;
+		AVCodecContext* c_l;
+		AVCodecContext* c_r;
 		AVFrame* ricohleftFrame;
 		AVFrame* ricohrightFrame;
 
