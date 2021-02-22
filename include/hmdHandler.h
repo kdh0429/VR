@@ -157,7 +157,7 @@ public:
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
-	int targetDim = 512;
+	int targetDim = 512;  // this means hmd resolution. it is related with fps.
 	MapCoord LEFT_MAP_COORDS[CubeFaceName::NumFaces];
 	MapCoord RIGHT_MAP_COORDS[CubeFaceName::NumFaces];
 

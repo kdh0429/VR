@@ -371,14 +371,27 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
 
 void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) 
-{
+{  
+    /*
     if (subCallbackFlag == false)
     {   
         subCallbackFlag = true;
     }
+    */
+    if (hmdPtr->is_stream_process_finished && hmdPtr->is_stream_process_finished_l && hmdPtr->is_stream_process_finished_r )
+    {
+        if (hmdPtr->process_stream_thread.joinable())
+        {
+            hmdPtr->process_stream_thread.join();
+        }
+        hmdPtr->is_stream_process_finished = false;
+        hmdPtr->stored_stream_packet = std::make_shared<std_msgs::UInt8MultiArray>(*streamPacket);
+        // streamCallbackBackground( streamPtr, hmdPtr);
+        hmdPtr->process_stream_thread = std::thread(streamCallbackBackground, streamPtr, hmdPtr);
+    }
     else
     {
-        //ROS_WARN("stream data is not processed yet");
+        ROS_WARN("stream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -1305,6 +1318,31 @@ void HMD::init() {
     ros::NodeHandle node;
     // ros::AsyncSpinner spinner(0);
     // spinner.start();
+    std::cout << "1  " << ros::Time::now() << std::endl;
+    std::cout << "2  " << ros::Time::now() << std::endl;
+    cv::Mat src_img = cv::imread("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png",0);
+    std::cout << "3  " << ros::Time::now() << std::endl;
+    //cv::Size size_img_gpu = src_img.size();
+    cv::Mat rot_img;
+    gpu_img_rot.create(cv::Size(size_img_gpu.height, size_img_gpu.width));
+    std::cout << "3+ " << ros::Time::now() << std::endl;
+    cv::cuda::GpuMat gpu_img;
+    gpu_img.upload(src_img);
+    std::cout << "4  " << ros::Time::now() << std::endl;
+    gpu_img.upload(src_img);
+    std::cout << "5  " << ros::Time::now() << std::endl;
+    cv::cuda::GpuMat gpu_img_rot;
+    cv::cuda::rotate(gpu_img, gpu_img_rot, , -90, size_img_gpu.height-1,0,cv::INTER_LINEAR);
+    std::cout << "6  " << ros::Time::now() << std::endl;
+    gpu_img_rot.download(src_img);
+    std::cout << "7  " << ros::Time::now() << std::endl;
+    cv::Mat rot_img;
+    cv::rotate(src_img, rot_img, cv::ROTATE_90_COUNTERCLOCKWISE);
+    std::cout << "8  " << ros::Time::now() << std::endl;
+    cv::imshow("hello", src_img);
+    cv::waitKey(3000);
+
+
     hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
     leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
     rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
@@ -1543,10 +1581,11 @@ void HMD::RenderFrame()
         {
             continue;
         }
+        /*
         if(subCallbackFlag == false){
             continue;
         }
-        
+        */
         render_mutex.lock();
         for (int i = 0; i < 6; i++) {
             glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);

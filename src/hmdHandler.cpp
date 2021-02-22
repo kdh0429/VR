@@ -81,7 +81,28 @@ void createCubeMapFace_left_thread(HMD* hmdPtr)
     hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
     hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
 
+    cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
+    cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
+    cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
+    cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
+    cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
+    cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
+    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
+    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
 }
+
+
 void createCubeMapFace_right_thread(HMD* hmdPtr)
 {
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
@@ -91,16 +112,36 @@ void createCubeMapFace_right_thread(HMD* hmdPtr)
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
 
+    cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
+    cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
+    cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
+    cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
+    cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
+    cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
+    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
+    
+    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
+    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
 }
 
 void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
 {
-    float depth, distance,distance_cali;
+    float depth, distance, distance_cali;
     depth = data.data[0];
     distance = data.data[1]; // 0~1
-    distance_cali = -0.15 + distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // 가장 정확 할 때에는 distance_cali 가 0일 때
-    HMD::m_mat4eyePosLeft = HMD::GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali);
-    HMD::m_mat4eyePosRight =HMD::GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali);
+    distance_cali = /*-0.15 +*/ distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // Best Condition : distance_cali == 0
+    
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali);
+    m_mat4eyePosRight =GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali); 
 }
 
 void decode_thread_l(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
@@ -158,6 +199,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         hmdPtr->rightCvEquirect = cv::Mat(hmdPtr->height, hmdPtr->width, CV_8UC3);
         hmdPtr->rightDat.data[0] = (uint8_t*)(hmdPtr->rightCvEquirect).data;
 
+
         avpicture_fill((AVPicture*)&(hmdPtr->leftDat), (hmdPtr->leftDat).data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
         avpicture_fill((AVPicture*)&(hmdPtr->rightDat), (hmdPtr->rightDat).data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
 
@@ -175,7 +217,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     // }
 
     //gotFrame = 0;
-
+    // start = clock();
     streamPtr->ricohPacket_r.size = streamPacket->layout.dim[4].size;
     streamPtr->ricohPacket_r.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
     std::thread t1(decode_thread_l,streamPtr, hmdPtr,gotFrame_l);
@@ -183,6 +225,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     t1.join();
     t2.join();
     
+    // end = clock();
+    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    // std::cout << "time(decode) : " << time << std::endl;
+
     // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
     // if (right_len < 0 || !gotFrame) {
     //     std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
@@ -201,7 +247,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     // stream_packet_mutex.unlock();
     
     
-    // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.05초 
+    // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.03초 
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
 
 
@@ -259,14 +305,14 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
     std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
     
-    // createcubemapface 0.028초 소요
+    // createcubemapface 0.016초 소요
     //cube_threads.clear();
     
     left_cube.join();
     right_cube.join();
 
     // end = clock();
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    // time = (double)(end - start)/ CLOCKS_PER_SEC;
     // std::cout << "time(createcube) : " << time << std::endl;
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
     // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0});
@@ -293,48 +339,12 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
     
-    //cv::flip등의 처리 0.007초 소요
-    cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
-    cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
-    cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
-    cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
-    cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+    //cv::flip등의 처리 0.007초 소요//
 
-    cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
-    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
-    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
 
 
 //// left
-    cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
-    cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
-    cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
-    cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
-    cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
 
-    cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
-    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
-    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
 //////
 
 
@@ -859,7 +869,7 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
     );
 }
 
-Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance = 0.0)
+Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.0)
 {
     if (!VRSystem)
     {
@@ -867,14 +877,17 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance = 0.0)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
+    std::cout <<"which eye ? : " << nEye << std::endl;
+    
+    if (nEye == vr::Eye_Right) matEyeRight.m[0][3] = eye_distance; //  눈 사이 거리
+    else matEyeRight.m[0][3] = -eye_distance;
+
+
     for (int i =0; i<3 ; i++){
         for (int j = 0; j < 4 ; j++){
-            std::cout << "matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+            std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
         }
     }
-    if (nEye == vr::Eye_Left) matEyeRight.m[0][3]=-eye_distance; //  눈 사이 거리
-    else matEyeRight.m[0][3]=eye_distance;
-       
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -952,7 +965,7 @@ void HMD::SetupCameras()
 {
     m_mat4ProjectionLeft = GetHMDMatrixProjectionEye(vr::Eye_Left);
     m_mat4ProjectionRight = GetHMDMatrixProjectionEye(vr::Eye_Right);
-    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left,0.0f);
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, 0.0f);
     m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right, 0.0f);
 }
 
