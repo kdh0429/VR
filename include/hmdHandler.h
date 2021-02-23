@@ -285,6 +285,7 @@ public: // OpenGL book keeping
 
 	float m_fScaleSpacing;
 	float m_fScale;
+    float depth=0.15;
 
 	int m_iSceneVolumeInit;
 
@@ -315,6 +316,8 @@ public: // OpenGL book keeping
 	Matrix4 m_mat4HMDPose;
 	Matrix4 m_mat4eyePosLeft;
 	Matrix4 m_mat4eyePosRight;
+
+    float distance, distance_cali;
 
 	Matrix4 m_mat4ProjectionCenter;
 	Matrix4 m_mat4ProjectionLeft;

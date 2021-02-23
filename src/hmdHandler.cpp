@@ -2,7 +2,6 @@
 
 
 
-
 void ThreadSleep(unsigned long nMilliseconds)
 {
 #if defined(_WIN32)
@@ -135,13 +134,26 @@ void createCubeMapFace_right_thread(HMD* hmdPtr)
 
 void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
 {
-    float depth, distance, distance_cali;
-    depth = data.data[0];
+    // if ((data.data[0]) != depth){
+    //     depth = data.data[0];
+    //     m_fScaleSpacing = depth;
+    //     //CreateAllShaders();
+    //     SetupTexturemaps();
+    //     SetupScene();
+    //     SetupCameras();
+    //     SetupStereoRenderTargets();
+    //     SetupCompanionWindow();
+    //     if (!vr::VRCompositor()) {
+    //     std::cout << "Compositor initialization failed" << std::endl; // it doesn't work
+    //     return;
+    // }
+    // }
     distance = data.data[1]; // 0~1
-    distance_cali = /*-0.15 +*/ distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // Best Condition : distance_cali == 0
+    distance_cali = -0.15 +distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // Best Condition : distance_cali == 0
     
     m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali);
     m_mat4eyePosRight =GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali); 
+
 }
 
 void decode_thread_l(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
@@ -684,7 +696,7 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     // hmd_yaw(1, 2) = 0.0;
     // hmd_yaw(2, 2) = 1.0;
 
-    Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
+    //Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
     // std::cout<<"Yaw angle "<<yaw_angle << std::endl;
     /*
     Vector4 A = mat * hmd_yaw * Vector4(-0.5, 0, -0.5, 1);
@@ -1419,11 +1431,11 @@ void HMD::init() {
     m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
     m_fScale = 5.0f;
-    m_fScaleSpacing = 0.0f;
+    m_fScaleSpacing = depth; // this is depth.
     
 
-    m_fNearClip = 1.0f;//0.1f; //깊이감?
-    m_fFarClip = 30.0f; 
+    m_fNearClip = 0.5f;
+    m_fFarClip = 25.0f; 
 
 
     /* Window Creation Process End */
@@ -1509,7 +1521,6 @@ void HMD::RunMainLoop()
     {
         bQuit = HandleInput();
         RenderFrame();
-
     }
 
     t.join();
@@ -1559,7 +1570,7 @@ void HMD::RenderFrame()
         r.sleep();
         // for now as fast as possible
         
-        if (first_data) //// 없어도 작동함.
+        if (first_data) //// 없어도 작동함//
         {
             continue;
         }
@@ -1989,7 +2000,7 @@ void HMD::RenderStereoTargets()
     // Left Eye
     glBindFramebuffer(GL_FRAMEBUFFER, leftEyeDesc.m_nRenderFramebufferId);
     glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
-    RenderScene1(vr::Eye_Left);   //없으면 왼쪽눈 render 안됨.
+    RenderScene1(vr::Eye_Left);   //없으면 왼쪽눈 render 안됨//
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glDisable(GL_MULTISAMPLE);
