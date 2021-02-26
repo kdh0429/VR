@@ -1,56 +1,57 @@
-#include <stdio.h>
-#include <openvr.h>
-#include <iostream>
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <sstream>
 
 
-using namespace vr;
+static const std::string OPENCV_WINDOW = "HUD Window";
 
-VROverlayHandle_t overlayHandle;
-vr::VREvent_t vrEvent;
-EVRInitError error;
+class ImageConverter
+{
+  ros::NodeHandle nh_;
+  image_transport::ImageTransport it_;
+  image_transport::Subscriber image_sub_;
+  
+public:
+  ImageConverter()
+    : it_(nh_)
+  {
+    image_sub_ = it_.subscribe("/rviz1/camera1/image", 10, 
+      &ImageConverter::imageCb, this);
+  }
 
-vr::HmdMatrix34_t transform = {								//overlay position
-	1.0f, 0.0f, 0.0f, 0.12f,								//+: upper axis
-	0.0f, 1.0f, 0.0f, 0.08f,								//+: right horizontal axis
-	0.0f, 0.0f, 1.0f, -0.3f									//-: forward axis
+  ~ImageConverter()
+  {
+    cv::destroyWindow(OPENCV_WINDOW);
+  }
+
+  void imageCb(const sensor_msgs::ImageConstPtr& msg)
+  {
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+
+    // Update GUI Window
+    cv::imshow(OPENCV_WINDOW, cv_ptr->image);
+    cv::waitKey(1);
+  }
 };
 
-vr::HmdMatrix34_t transform2 = {								//overlay position
-	1.0f, 0.0f, 0.0f, 0.12f,								//+: upper axis
-	0.0f, 1.0f, 0.0f, -0.08f,								//+: right horizontal axis
-	0.0f, 0.0f, 1.0f, -0.3f									//-: forward axis
-};
-
-void check_error(int line, EVRInitError error) { if (error != 0) printf("%d: error %s\n", line, VR_GetVRInitErrorAsSymbol(error)); }
-
-void uploadImage(){
-	VROverlay()->SetOverlayFromFile(overlayHandle, "C:/Users/Dyros/Desktop/avatar/src/rvizView/rvizView/bin/win64/image/yong.jpg");  
-	VROverlay()->SetOverlayAlpha(overlayHandle, 0.5);					//opacity
-	VROverlay()->SetOverlayWidthInMeters(overlayHandle, 0.2f);			//overlay size
-	VROverlay()->SetOverlayTransformTrackedDeviceRelative(overlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
-	VROverlay()->ShowOverlay(overlayHandle);
-}
-void uploadImage2(){
-	VROverlay()->SetOverlayFromFile(overlayHandle, "C:/Users/Dyros/Desktop/avatar/src/rvizView/rvizView/bin/win64/image/panorama.png");  
-	VROverlay()->SetOverlayAlpha(overlayHandle, 0.5);					//opacity
-	VROverlay()->SetOverlayWidthInMeters(overlayHandle, 0.2f);			//overlay size
-	VROverlay()->SetOverlayTransformTrackedDeviceRelative(overlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform2);
-	VROverlay()->ShowOverlay(overlayHandle);
-}
-
-int main(int argc, char **argv) { (void) argc; (void) argv;
-	
-	VR_Init(&error, vr::VRApplication_Overlay);
-	check_error(__LINE__, error);
-	
-
-	VROverlay()->CreateOverlay ("image", "rvizView", &overlayHandle); /* key has to be unique, name doesn't matter */
-	while(true){
-		uploadImage();
-		uploadImage2();
-	}	
-	
-
-	
-	return 0;
+int main(int argc, char** argv)
+{
+    cv::namedWindow(OPENCV_WINDOW);
+    ros::init(argc, argv, "image_converter");
+    ImageConverter ic;
+    ros::spin();
+    return 0;
 }

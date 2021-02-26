@@ -42,11 +42,19 @@ add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler
 									src/lodepng.cpp
 									src/pathtools.cpp
 									src/strtools.cpp)
+#add_executable(overlay src/main_rviz.cpp src/rvizOverlay.cpp src/glad.c
+#						src/Matrices.cpp
+#						src/lodepng.cpp
+#						src/pathtools.cpp
+#						src/strtools.cpp)
+
+
 add_executable(overlay src/rvizOverlay.cpp)
 
 include_directories(C:/Users/Dyros/Desktop/avatar/src/VR/include)
 include_directories(${catkin_INCLUDE_DIRS})
 target_link_libraries(vr ${catkin_LIBRARIES})
+
 
 include_directories(C:/Users/Dyros/openvr/headers)
 include_directories(C:/Users/Dyros/openvr/bin/win64)
@@ -89,7 +97,22 @@ C:/Users/Dyros/ffmpeg/lib/swresample.lib
 C:/Users/Dyros/ffmpeg/lib/swscale.lib
 )
 
+target_link_libraries(overlay ${catkin_LIBRARIES})
+target_link_libraries(overlay ${OpenCV_LIBRARIES})
 target_link_libraries(overlay
 	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(overlay 
 	C:/Users/Dyros/openvr-latest/lib/win64/openvr_api.lib
+	C:/opt/ros/melodic/x64/lib/SDL.lib
+	C:/opt/ros/melodic/x64/lib/SDL2.lib
+	C:/opt/ros/melodic/x64/lib/SDLmain.lib
+	C:/opt/ros/melodic/x64/lib/SDL_image.lib
+	C:/opt/ros/melodic/x64/lib/glew32.lib
+	C:/opt/ros/melodic/x64/lib/glew32s.lib
+	C:/opt/ros/melodic/x64/lib/freeglut.lib	
+	C:/Users/Dyros/Desktop/avatar/src/VR/glfwLib/glfw3.lib
+	C:/Users/Dyros/Desktop/avatar/src/VR/glfwLib/glfw3dll.lib
 )
