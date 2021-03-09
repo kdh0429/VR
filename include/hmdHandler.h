@@ -4,6 +4,7 @@
 #include <thread>
 #include <vector>
 #include <std_msgs/Float32MultiArray.h>
+#include <cmath>
 
 #ifndef hmdHandler_h
 #define hmdHandler_h
@@ -223,7 +224,7 @@ public:
 	
 
 	Matrix4 GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye);
-	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance);
+	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance, float eye_angle);
 	Matrix4 GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye);
 	void UpdateHMDMatrixPose();
 
@@ -317,7 +318,7 @@ public: // OpenGL book keeping
 	Matrix4 m_mat4eyePosLeft;
 	Matrix4 m_mat4eyePosRight;
 
-    float distance, distance_cali;
+    float distance, distance_cali,eye_angle, eye_angle_cali;
 
 	Matrix4 m_mat4ProjectionCenter;
 	Matrix4 m_mat4ProjectionLeft;

@@ -8,6 +8,8 @@
 #include <sstream>
 #include "hmdHandler.h"
 
+#include <QOpenGLFramebufferObjectFormat>
+
 
 using namespace vr;
 
@@ -95,22 +97,23 @@ public:
 
 int main(int argc, char** argv)
 {
-    VR_Init(&error, vr::VRApplication_Overlay);
-    VROverlay()->CreateOverlay ("image", "rvizView", &overlayHandle); /* key has to be unique, name doesn't matter */
-    VROverlay()->SetOverlayFromFile(overlayHandle, "C:/Users/Dyros/Desktop/avatar/src/VR/src/rvizView.png");
+  VR_Init(&error, vr::VRApplication_Overlay);
+  VROverlay()->CreateOverlay ("image", "rvizView", &overlayHandle); /* key has to be unique, name doesn't matter */
     
-    VROverlay()->SetOverlayAlpha(overlayHandle, 0.8);						//opacity
-	  VROverlay()->SetOverlayWidthInMeters(overlayHandle, 0.3f);				//overlay size
 
-    //check_error(__LINE__, error);
 
-	  VROverlay()->SetOverlayTransformTrackedDeviceRelative(overlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
-	  //check_error(__LINE__, error);
-    VROverlay()->ShowOverlay(overlayHandle);
-    //check_error(__LINE__, error);
-    //check_error(__LINE__, error);
-    ros::init(argc, argv, "image_converter");
-    // ImageConverter ic;
-    ros::spin();
-    return 0;
+  VROverlay()->SetOverlayFromFile(overlayHandle, "C:/Users/Dyros/Desktop/avatar/src/VR/src/rvizView.png");
+  //ROverlay()->SetOverlayTexture(overlayHandle, &tex_vr);
+
+  VROverlay()->SetOverlayAlpha(overlayHandle, 0.8);						//opacity
+	VROverlay()->SetOverlayWidthInMeters(overlayHandle, 0.3f);				//overlay size
+
+  VROverlay()->SetOverlayTransformTrackedDeviceRelative(overlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+	  
+  VROverlay()->ShowOverlay(overlayHandle);
+    
+  ros::init(argc, argv, "image_converter");
+  // ImageConverter ic;
+  ros::spin();
+  return 0;
 }

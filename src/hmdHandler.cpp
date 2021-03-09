@@ -148,11 +148,13 @@ void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
     //     return;
     // }
     // }
+    eye_angle = data.data[0] - 0.5;
+    eye_angle_cali = eye_angle * 10 * M_PI / 180 ;// -5 to 5 degree
     distance = data.data[1]; // 0~1
     distance_cali = -0.15 +distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // Best Condition : distance_cali == 0
     
-    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali);
-    m_mat4eyePosRight =GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali); 
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali, eye_angle_cali);
+    m_mat4eyePosRight =GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali , eye_angle_cali); 
 
 }
 
@@ -881,7 +883,7 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
     );
 }
 
-Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.0)
+Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.0, const float eye_angle = 0.0)
 {
     if (!VRSystem)
     {
@@ -891,9 +893,22 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
     std::cout <<"which eye ? : " << nEye << std::endl;
     
-    if (nEye == vr::Eye_Right) matEyeRight.m[0][3] = eye_distance; //  눈 사이 거리
-    else matEyeRight.m[0][3] = -eye_distance;
-
+    if (nEye == vr::Eye_Right) {
+        matEyeRight.m[0][3] = eye_distance; //  눈 사이 거리//
+        matEyeRight.m[0][0] = cos(eye_angle);
+        matEyeRight.m[0][2] = sin(eye_angle);
+        matEyeRight.m[2][0] = -sin(eye_angle);    // right : +x, front: -z, top : +y
+        matEyeRight.m[2][2] = cos(eye_angle); 
+    }
+    else {
+        matEyeRight.m[0][3] = -eye_distance;
+        matEyeRight.m[0][0] = cos(eye_angle);
+        matEyeRight.m[0][2] = -sin(eye_angle);
+        matEyeRight.m[2][0] = sin(eye_angle);    // right : +x, front: -z, top : +y
+        matEyeRight.m[2][2] = cos(eye_angle);   //matEyeRight = rotation matrix
+               
+        
+    }
 
     for (int i =0; i<3 ; i++){
         for (int j = 0; j < 4 ; j++){
