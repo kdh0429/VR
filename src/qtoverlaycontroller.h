@@ -51,7 +51,7 @@ public:
     ~OverlayWidget();
     void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg);
 	void OverlayWidget::WInit();
-	void OverlayWidget::commandCallback(const std_msgs::Bool::ConstPtr& msg);
+	void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg);
 //private slots:
 
 
@@ -61,9 +61,6 @@ private:
 	char **argv;
     Ui::OverlayWidget *ui;
 
-    QTimer *timer;
-    
-    cv::Mat frame;
     QImage qt_image;
 };
 
@@ -75,6 +72,7 @@ class OverlayController : public QObject
 
 public:
     static OverlayController *SharedInstance();
+
 
 public:
     OverlayController();
@@ -97,8 +95,12 @@ public:
 
 	void OverlayController::ShowRviz();
 	void OverlayController::HideRviz();
-	void OverlayController::recognizeSpeech();
-
+	void OverlayController::MoveOverlayRight();
+	void OverlayController::MoveOverlayLeft();
+	void OverlayController::MoveOverlayUp();
+	void OverlayController::MoveOverlayDown();
+	void OverlayController::ChangeOpacity(float number);
+	
 
 public slots:
 	void OnSceneChanged( const QList<QRectF>& );
@@ -131,10 +133,7 @@ private:
 	QOffscreenSurface *m_pOffscreenSurface;
 
 	// the widget we're drawing into the texture
-	QWidget *m_pWidget;
-
-	QTimer *voicetimer;
-	
+	QWidget *m_pWidget;	
 };
 
 

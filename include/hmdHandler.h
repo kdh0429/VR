@@ -97,12 +97,12 @@ public:
 
 	
 	bool checkControllers = false;
-	bool checkTrackers = false;
+	bool checkTrackers = true;
 	bool allTrackersFine = true;
 	std_msgs::Bool allTrackersFineData;
 	static const uint32_t trackerNum = 6;
 	char serialNumber[trackerNum][15];
-	bool pubPose = false;
+	bool pubPose = true;
 	int loop_tick_ = 0;
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
 	bool subCallbackFlag = false;
@@ -286,7 +286,7 @@ public: // OpenGL book keeping
 
 	float m_fScaleSpacing;
 	float m_fScale;
-    float depth=0.15;
+    float depth=0.5;
 
 	int m_iSceneVolumeInit;
 

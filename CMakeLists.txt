@@ -84,8 +84,6 @@ add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler
 
 add_executable(overlay src/main_rviz2.cpp src/qtoverlaycontroller.cpp src/qtoverlaycontroller.h)
 
-# add_executable(overlay src/helloworld/helloworld.cpp)
-
 include_directories(C:/Users/Dyros/Desktop/avatar/src/VR/include)
 include_directories(${catkin_INCLUDE_DIRS})
 target_link_libraries(vr ${catkin_LIBRARIES})
@@ -96,8 +94,7 @@ include_directories(C:/Users/Dyros/openvr/bin/win64)
 target_link_libraries(vr C:/Users/Dyros/openvr-latest/lib/win64/openvr_api.lib)
 
 include_directories(C:/Users/Dyros/eigen)
-include_directories(C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/c_api)
-include_directories(C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/cxx_api)
+
 include_directories(${OpenCV_INCLUDE_DIRS})
 target_link_libraries(vr ${OpenCV_LIBRARIES})
 
@@ -142,12 +139,4 @@ target_link_libraries(overlay ${QT_LIBRARIES})
 
 target_link_libraries(overlay 
 	C:/Users/Dyros/openvr-latest/lib/win64/openvr_api.lib
-	C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/Microsoft.CognitiveServices.Speech.core.lib
 )
-
-# add_library(overlay
-# 	C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/Microsoft.CognitiveServices.Speech.core.dll
-# 	C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/Microsoft.CognitiveServices.Speech.extension.codec.dll
-# 	C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/Microsoft.CognitiveServices.Speech.extension.kws.dll
-# 	C:/Users/Dyros/Desktop/avatar/src/VR/src/helloworld/include/Microsoft.CognitiveServices.Speech.extension.silk_codec.dll
-# )

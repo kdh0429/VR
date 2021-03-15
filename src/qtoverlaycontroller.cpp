@@ -8,15 +8,16 @@
 #include <QOpenGLPaintDevice>
 #include <QPainter>
 #include <QtWidgets/QWidget>
-#include <QMouseEvent>
-#include <QtWidgets/QGraphicsSceneMouseEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGraphicsEllipseItem>
 #include <QCursor>
 
 #include "ui_widget.h"
-#include <speechapi_cxx.h>
-using namespace Microsoft::CognitiveServices::Speech;
+
+// #include <speechapi_cxx.h>
+// using namespace Microsoft::CognitiveServices::Speech;
+#include <vector>
+
 using namespace vr;
 
 vr::HmdMatrix34_t transform = {								//overlay position
@@ -29,23 +30,9 @@ OverlayWidget::OverlayWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::OverlayWidget)
 {
-	
     ui->setupUi(this);
-    timer = new QTimer(this);
-
-	std::cout << "22" << std::endl;
-
-    // ros::init(argc, argv, "image_rviz");
-    // ros::NodeHandle nh;
-    // cv::namedWindow("rviz_image");
-
-    // image_transport::ImageTransport it(nh);
-    // image_transport::Subscriber sub = it.subscribe("/rviz1/camera1/image", 1,
-    //     &OverlayWidget::update_rviz, this);
     
-
-    // connect(timer, SIGNAL(timeout()), this, SLOT(update_window()));
-    // timer->start(20);
+	std::cout << "22" << std::endl;
 }
 
 OverlayWidget::~OverlayWidget()
@@ -64,33 +51,68 @@ void OverlayWidget::WInit()
     image_transport::Subscriber sub = it.subscribe("/rviz1/camera1/image", 1,
         &OverlayWidget::update_rviz, this);
 	
-	ros::Subscriber command_sub = nh.subscribe("overlay_bool", 10,
+	ros::Subscriber command_sub = nh.subscribe("overlay_command", 10,
 		&OverlayWidget::commandCallback, this);
-	cv::waitKey(1000);
-	OverlayController::SharedInstance()->OnSceneUpdate();
-    ros::spin();
+	
+	ros::spin();
 	std::cout << "88" << std::endl;
 }
 
-void OverlayWidget::commandCallback(const std_msgs::Bool::ConstPtr& msg)
+void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg)
 {
-	switch(msg->data)
-	{
-		case false:
-			std::cout << "close overlay" << std::endl;
-			OverlayController::SharedInstance()->HideRviz();
-			break;
-		case true:
-			std::cout << "open overlay" << std::endl;
-			OverlayController::SharedInstance()->ShowRviz();
-			break;
+	std::string opacity = msg->data;
+	std::istringstream ss(opacity);
+	std::string stringBuffer;
+	std::vector<std::string> xx;
+	xx.clear();
+	while(getline(ss, stringBuffer, ' ')){
+		xx.push_back(stringBuffer);
 	}
-	
+	if(0 == strcmp(msg->data.c_str(), "close"))
+	{
+		std::cout << "close overlay" << std::endl;
+		OverlayController::SharedInstance()->HideRviz();
+	}
+	else if(0 == strcmp(msg->data.c_str(), "open"))
+	{
+		std::cout << "open overlay" << std::endl;
+		OverlayController::SharedInstance()->ShowRviz();
+	}		
+	else if(0 == strcmp(msg->data.c_str(), "right"))
+	{
+		std::cout << "move overlay right" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayRight();
+	}
+	else if(0 == strcmp(msg->data.c_str(), "left"))
+	{
+		std::cout << "move overlay left" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayLeft();
+	}
+	else if(0 == strcmp(msg->data.c_str(), "up"))
+	{
+		std::cout << "move overlay up" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayUp();
+	}
+	else if(0 == strcmp(msg->data.c_str(), "down"))
+	{		
+		std::cout << "move overlay down" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayDown();		
+	}
+	// else if(0 == strcmp(xx[1].c_str(),"option"))
+	// {
+	// 	int numb = atoi(xx[2].c_str());
+	// 	float var = numb * 0.01;
+	// 	if(var < 1.0){
+	// 		OverlayController::SharedInstance()->ChangeOpacity(var);
+	// 	}
+	// 	else{
+	// 		std::cout << "wrong command!" << std::endl;
+	// 	}
+	// }
 }
 
 void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
 {
-
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
@@ -151,7 +173,6 @@ OverlayController::OverlayController()
 	, m_pFbo( NULL )
 	, m_pOffscreenSurface ( NULL )
 	, m_pWidget( NULL )
-	, voicetimer( NULL )
 {
 }
 
@@ -239,16 +260,11 @@ bool OverlayController::Init()
 
 	if( bSuccess )
 	{
-        vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.2f );
+		vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.2f );
         vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
 		vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.9);
 		vr::VROverlay()->ShowOverlay(m_ulOverlayHandle);
 	}
-	
-	// voicetimer = new QTimer(this);
-	// connect(voicetimer, SIGNAL(timeout()),this,SLOT(recognizeSpeech()));
-	// voicetimer -> setInterval(20);
-	// voicetimer -> start();
 	std::cout << "44" << std::endl;
 	return true;
 }
@@ -272,11 +288,6 @@ void OverlayController::Shutdown()
 		m_pOpenGLContext = NULL;
 	}
 }
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -306,8 +317,9 @@ void OverlayController::OnSceneChanged( const QList<QRectF>& )
 	}
 	std::cout << "00" << std::endl;
 }
+
 //-----------------------------------------------------------------------------
-// Purpose:
+// Purpose: update qt5 image
 //-----------------------------------------------------------------------------
 
 void OverlayController::OnSceneUpdate()
@@ -385,64 +397,73 @@ bool OverlayController::ConnectToVRRuntime()
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: overlay on function
+//-----------------------------------------------------------------------------
 void OverlayController::ShowRviz()
 {
 	vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.5);
 }
+
+//-----------------------------------------------------------------------------
+// Purpose: overlay off function
+//-----------------------------------------------------------------------------
 void OverlayController::HideRviz()
 {
 	vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0);
 }
 
-void OverlayController::recognizeSpeech()
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayRight()
 {
-    // Creates an instance of a speech config with specified subscription key and service region.
-    // Replace with your own subscription key and service region (e.g., "westus").
-    auto config = SpeechConfig::FromSubscription("3a2dc20079054eae8f486f2dda519630", "koreacentral");
-
-    // Creates a speech recognizer.
-    auto recognizer = SpeechRecognizer::FromConfig(config);
-    std::cout << "Say something...\n";
-
-    // Starts speech recognition, and returns after a single utterance is recognized. The end of a
-    // single utterance is determined by listening for silence at the end or until a maximum of 15
-    // seconds of audio is processed.  The task returns the recognition text as result. 
-    // Note: Since RecognizeOnceAsync() returns only a single utterance, it is suitable only for single
-    // shot recognition like command or query. 
-    // For long-running multi-utterance recognition, use StartContinuousRecognitionAsync() instead.
-    auto result = recognizer->RecognizeOnceAsync().get();
-
-    // Checks result.
-    if (result->Reason == ResultReason::RecognizedSpeech)
-    {
-        std::cout << "We recognized: " << result->Text << std::endl;
-		if ( result->Text == "Close.")
-		{
-			HideRviz();
-		}
-		else if ( result->Text == "Open.")
-		{
-			ShowRviz();
-		}
-    }
-    else if (result->Reason == ResultReason::NoMatch)
-    {
-        std::cout << "NOMATCH: Speech could not be recognized." << std::endl;
-    }
-    else if (result->Reason == ResultReason::Canceled)
-    {
-        auto cancellation = CancellationDetails::FromResult(result);
-        std::cout << "CANCELED: Reason=" << (int)cancellation->Reason << std::endl;
-
-        if (cancellation->Reason == CancellationReason::Error) 
-        {
-            std::cout << "CANCELED: ErrorCode= " << (int)cancellation->ErrorCode << std::endl;
-            std::cout << "CANCELED: ErrorDetails=" << cancellation->ErrorDetails << std::endl;
-            std::cout << "CANCELED: Did you update the subscription info?" << std::endl;
-        }
-    }
+	transform.m[0][3]= transform.m[0][3] + 0.01;
+	std::cout << transform.m[0][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
 }
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayLeft()
+{
+	transform.m[0][3]= transform.m[0][3] - 0.01;
+	std::cout << transform.m[0][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayUp()
+{
+	transform.m[1][3]= transform.m[1][3] + 0.01;
+	std::cout << transform.m[1][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayDown()
+{
+	transform.m[1][3]= transform.m[1][3] - 0.01;
+	std::cout << transform.m[1][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::ChangeOpacity(float number)
+{
+	vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle, number);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
 void OverlayController::DisconnectFromVRRuntime()
 {
 	vr::VR_Shutdown();

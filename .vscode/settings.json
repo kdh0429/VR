@@ -60,6 +60,12 @@
         "xstddef": "cpp",
         "xtr1common": "cpp",
         "sstream": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "array": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "resumable": "cpp",
+        "future": "cpp",
+        "map": "cpp"
     }
 }

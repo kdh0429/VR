@@ -850,7 +850,7 @@ void HMD::SetupScene()
         GLsizei stride = sizeof(VertexDataScene);
         uintptr_t offset = 0;
 
-        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(0); //////
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (const void*)offset);
 
         offset += sizeof(Vector3);
@@ -1423,7 +1423,7 @@ void HMD::init() {
         printf("%s - Error initializing GLEW! %s\n", __FUNCTION__, glewGetErrorString(nGlewError));
         return;
     }
-    glGetError(); // to clear the error caused deep in GLEW
+    glGetError(); // toG clear the error caused deep in LEW
 
     if (SDL_GL_SetSwapInterval(m_bVblank ? 1 : 0) < 0)
     {
@@ -1461,7 +1461,7 @@ void HMD::init() {
         return;
 
     std::cout << "Start Connection Check" << std::endl;   
-    checkConnection();
+    checkConnection();                                        
     //ros::Duration(5.0).sleep();
     SetupTexturemaps();
     SetupScene();
@@ -1565,15 +1565,15 @@ void HMD::RunMainLoop()
 //     // ros::waitForShutdown();
 // }
 
-void HMD::RunRosLoop()
-{
-    ros::Rate rate(1000);
-    while (ros::ok())
-    {
-        rosPublish();
-        rate.sleep();
-    }
-}
+// void HMD::RunRosLoop()
+// {
+//     ros::Rate rate(1000);
+//     while (ros::ok())
+//     {
+//         rosPublish();
+//         rate.sleep();
+//     }
+// }
 
 void HMD::RenderFrame()
 {
