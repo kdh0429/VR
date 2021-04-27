@@ -1,4 +1,4 @@
-#include "hmdHandler.h"
+#include "hmdHandler_reduce.h"
 
 
 
@@ -45,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -73,26 +73,26 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 //cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
 void createCubeMapFace_left_thread(HMD* hmdPtr)
 {
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
     hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
     hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
     hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
 
-    cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
-    cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
+    // cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
     
     cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
     cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
-    cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
     
-    cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
-    cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
-
-    cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
+    // cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
+    // cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
     
     cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
     cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
@@ -104,26 +104,26 @@ void createCubeMapFace_left_thread(HMD* hmdPtr)
 
 void createCubeMapFace_right_thread(HMD* hmdPtr)
 {
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 0);
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 0);
     hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
 
-    cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
-    cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
+    // cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
     
     cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
     cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
-    cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
-    cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
 
-    cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
+    // cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
+    // cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
     
     cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
     cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
@@ -315,13 +315,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
 
     // start = clock();
-    
+
     std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
     std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
-    // std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
-    // std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
-    // std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
-    // std::cout << "cubeheight : " << hmdPtr->LeftcubeBack.rows << std::endl;
+    
     // createcubemapface 0.016초 소요
     //cube_threads.clear();
     
@@ -330,24 +327,6 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     // end = clock();
     // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time(createcube) : " << time << std::endl;
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0});
-
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1});
-
-    //for (auto &tmp : cube_threads) tmp.join();
-    
-
     
     //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
     //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
@@ -358,38 +337,12 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     //cv::flip등의 처리 0.007초 소요//
 
-
-
-//// left
-
-//////
-
-
-    //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
-    //cv::resize(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
-    //cv::imshow("left equirect", hmdPtr->leftCvEquirect);
-    //cv::imshow("right equirect", hmdPtr->rightCvEquirect);
-
-
-   
-   /* cv::imshow("LEFT back face", hmdPtr->LeftcubeBack);
-    cv::imshow("LEFT left face", hmdPtr->LeftcubeLeft);
-    cv::imshow("LEFT Right face", hmdPtr->LeftcubeRight);
-    cv::imshow("LEFT Top face", hmdPtr->LeftcubeTop);
-    cv::imshow("LEFT Bottom face", hmdPtr->LeftcubeBottom);
-
-    cv::imshow("RIGHT back face", hmdPtr->RightcubeBack);
-    cv::imshow("RIGHT left face", hmdPtr->RightcubeLeft);
-    cv::imshow("RIGHT Right face", hmdPtr->RightcubeRight);
-    cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
-    cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
-    //cv::imshow("rviz", hmdPtr->RvizScreen);
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time : " << time << std::endl;
-    // std::cout << "fps : " << (double)1/time << std::endl;
-    // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
-    // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
+    std::cout << "time : " << time << std::endl;
+    std::cout << "fps : " << (double)1/time << std::endl;
+    std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
+    std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
     //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
     hmdPtr->first_data = false;
@@ -412,7 +365,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     }
     else
     {
-        // ROS_WARN("st ream data is not processed yet");
+        ROS_WARN("stream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -626,7 +579,7 @@ bool HMD::CreateAllShaders()
 bool HMD::SetupTexturemaps()
 {
     std::string sExecutableDirectory = Path_StripFilename(Path_GetExecutablePath());
-    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png", sExecutableDirectory);
+    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama1.png", sExecutableDirectory);
 
     std::vector<unsigned char> imageRGBA;
  
@@ -725,12 +678,12 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     
     if (flag == 0){
         // triangles instead of quads
-        AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata); //Front
-        AddCubeVertex(F.x, F.y, F.z, 1, 1, vertdata);
-        AddCubeVertex(G.x, G.y, G.z, 1, 0, vertdata);
-        AddCubeVertex(G.x, G.y, G.z, 1, 0, vertdata);
-        AddCubeVertex(H.x, H.y, H.z, 0, 0, vertdata);
-        AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata);
+        // AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata); //Front
+        // AddCubeVertex(F.x, F.y, F.z, 1, 1, vertdata);
+        // AddCubeVertex(G.x, G.y, G.z, 1, 0, vertdata);
+        // AddCubeVertex(G.x, G.y, G.z, 1, 0, vertdata);
+        // AddCubeVertex(H.x, H.y, H.z, 0, 0, vertdata);
+        // AddCubeVertex(E.x, E.y, E.z, 0, 1, vertdata);
     }
     else if (flag == 1) {
         AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata); //Back
@@ -741,20 +694,20 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
         AddCubeVertex(B.x, B.y, B.z, 0, 1, vertdata);
     }
     else if (flag == 2) {
-        AddCubeVertex(H.x, H.y, H.z, 0, 1, vertdata); //Top
-        AddCubeVertex(G.x, G.y, G.z, 1, 1, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
-        AddCubeVertex(D.x, D.y, D.z, 0, 0, vertdata);
-        AddCubeVertex(H.x, H.y, H.z, 0, 1, vertdata);
+        // AddCubeVertex(H.x, H.y, H.z, 0, 1, vertdata); //Top
+        // AddCubeVertex(G.x, G.y, G.z, 1, 1, vertdata);
+        // AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        // AddCubeVertex(C.x, C.y, C.z, 1, 0, vertdata);
+        // AddCubeVertex(D.x, D.y, D.z, 0, 0, vertdata);
+        // AddCubeVertex(H.x, H.y, H.z, 0, 1, vertdata);
     }
     else if (flag == 3) {
-        AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata); //Bottom
-        AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
-        AddCubeVertex(F.x, F.y, F.z, 1, 0, vertdata);
-        AddCubeVertex(F.x, F.y, F.z, 1, 0, vertdata);
-        AddCubeVertex(E.x, E.y, E.z, 0, 0, vertdata);
-        AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
+        // AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata); //Bottom
+        // AddCubeVertex(B.x, B.y, B.z, 1, 1, vertdata);
+        // AddCubeVertex(F.x, F.y, F.z, 1, 0, vertdata);
+        // AddCubeVertex(F.x, F.y, F.z, 1, 0, vertdata);
+        // AddCubeVertex(E.x, E.y, E.z, 0, 0, vertdata);
+        // AddCubeVertex(A.x, A.y, A.z, 0, 1, vertdata);
     }
     else if (flag == 4) {
         AddCubeVertex(F.x, F.y, F.z, 0, 1, vertdata); //Right
@@ -832,9 +785,6 @@ void HMD::SetupScene()
                     if (i < 6) {
                         AddCubeToScene(mat, vertdataarrays[i], i);
                     }
-                    else {
-                        AddScreenToScene(mat, vertdataarrays[i]);
-                    }
                     mat = mat * Matrix4().translate(m_fScaleSpacing, 0, 0);
                 }
                 mat = mat * Matrix4().translate(-((float)m_iSceneVolumeWidth) * m_fScaleSpacing, m_fScaleSpacing, 0);
@@ -873,11 +823,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-    // for (int i =0; i<4 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<4 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+        }
+    }
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -913,11 +863,11 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.
         
     }
 
-    // for (int i =0; i<3 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+        }
+    }
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -1044,9 +994,9 @@ bool HMD::SetupStereoRenderTargets()
         std::cout << "Setup Stereo Render Target process failed.. program exit" << std::endl;
         return false;
     }
-    VRSystem->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
-    // m_nRenderWidth = 1440;
-    // m_nRenderHeight = 1660;
+    //VRSystem->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
+    m_nRenderWidth = 3864;
+    m_nRenderHeight = 4296;
 
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, leftEyeDesc);
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, rightEyeDesc);
@@ -1440,8 +1390,8 @@ void HMD::init() {
     m_strDriver = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String);
     m_strDisplay = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String);
 
-    // std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
-    // SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
+    std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
+    SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
 
     // cube array
     m_iSceneVolumeWidth = m_iSceneVolumeInit;
@@ -1535,6 +1485,7 @@ void HMD::ROSTasks()
 void HMD::RunMainLoop()
 {   
     bool bQuit = false;
+
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
     //loop_tick_ = 0;
@@ -1602,11 +1553,11 @@ void HMD::RenderFrame()
         for (int i = 0; i < 6; i++) {
             glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
             switch (i) {
-            case 0:
+            case 0://뒤
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeFront.data[0]);
                 break;
-            case 1:
+            case 1://앞
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBack.cols, LeftcubeBack.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBack.data[0]);
                 break;
@@ -1618,11 +1569,11 @@ void HMD::RenderFrame()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBottom.cols, LeftcubeBottom.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBottom.data[0]);
                 break;
-            case 4:
+            case 4://오른쪽
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeLeft.cols, LeftcubeLeft.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeLeft.data[0]);
                 break;
-            case 5:
+            case 5://왼쪽
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
                 break;
@@ -1642,17 +1593,14 @@ void HMD::RenderFrame()
             glBindTexture(GL_TEXTURE_2D, 0);
 
         }
-        // std::cout << "width : " << LeftcubeBack.cols << std::endl;
-        // std::cout << "width : " << LeftcubeTop.cols << std::endl;
-        // std::cout << "height : " << LeftcubeBack.rows << std::endl;
-        // std::cout << "height : " << LeftcubeTop.rows << std::endl;
+
 /////////////////////////////////right/////////////////
         for (int i = 0; i < 6; i++) {
             glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
             switch (i) {
             case 0:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeFront.cols, RightcubeFront.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeFront.data[0]);
+                // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeFront.cols, RightcubeFront.rows,
+                //     0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeFront.data[0]);
                 break;
             case 1:
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBack.cols, RightcubeBack.rows,
@@ -2243,7 +2191,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // run actual resampling using OpenCV's remap
-    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
     return ;
 }

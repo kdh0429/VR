@@ -21,9 +21,9 @@
 using namespace vr;
 
 vr::HmdMatrix34_t transform = {								//overlay position
-	1.0f, 0.0f, 0.0f, 0.2f,									//+: right horizontal axis
+	1.0f, 0.0f, 0.0f, 0.4f,									//+: right horizontal axis
 	0.0f, 1.0f, 0.0f, 0.0f,									//+: upper axis
-	0.0f, 0.0f, 1.0f, -0.4f									//-: forward axis
+	0.0f, 0.0f, 1.0f, -1.0f									//-: forward axis
 };
 
 OverlayWidget::OverlayWidget(QWidget *parent) :
@@ -42,20 +42,45 @@ OverlayWidget::~OverlayWidget()
 
 void OverlayWidget::WInit()
 {
-	
-	ros::init(argc, argv, "image_rviz");
+	//ros::init(argc, argv, "image_rviz");
+	std::cout << "88" << std::endl;
     ros::NodeHandle nh;
-    cv::namedWindow("rviz_image");
 
     image_transport::ImageTransport it(nh);
+
     image_transport::Subscriber sub = it.subscribe("/rviz1/camera1/image", 1,
         &OverlayWidget::update_rviz, this);
-	
+
 	ros::Subscriber command_sub = nh.subscribe("overlay_command", 10,
 		&OverlayWidget::commandCallback, this);
-	
+
+	ros::Subscriber status_sub = nh.subscribe("/tocabi_status", 1,
+		&OverlayWidget::update_status, this);
+
+	// for (int i=0; i<trackerNum; i++)
+    // {
+    //     std::string topic_name = "TRACKER" + std::to_string(i);
+    //     ros::Subscriber status_sub = nh.subscribe(topic_name, 10,
+	// 		&OverlayWidget::update_status, this);
+    // }
+	ros::Subscriber trackers_sub = nh.subscribe("TRACKERSTATUS", 1,
+		&OverlayWidget::tracker_status, this);
+
+
+	cv::namedWindow("rviz_image");
 	ros::spin();
-	std::cout << "88" << std::endl;
+	
+}
+void OverlayWidget::update_status(const std_msgs::String::ConstPtr& msg)
+{
+	ui->label_2->clear();
+	ui->label_2->setText(msg->data.c_str());
+	//ui->label_2->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
+	ui->label_2->show();
+
+	ui->textEdit->append(msg->data.c_str());
+	// ui->textEdit->setTextBackgroundColor(QColor(Qt::transparent));
+	ui->textEdit->setStyleSheet("QTextEdit { color : black; }");
 }
 
 void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg)
@@ -98,6 +123,16 @@ void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg)
 		std::cout << "move overlay down" << std::endl;
 		OverlayController::SharedInstance()->MoveOverlayDown();		
 	}
+	else if(0 == strcmp(msg->data.c_str(), "front"))
+	{		
+		std::cout << "move overlay front" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayFront();		
+	}
+	else if(0 == strcmp(msg->data.c_str(), "back"))
+	{		
+		std::cout << "move overlay back" << std::endl;
+		OverlayController::SharedInstance()->MoveOverlayBack();		
+	}
 	// else if(0 == strcmp(xx[1].c_str(),"option"))
 	// {
 	// 	int numb = atoi(xx[2].c_str());
@@ -111,6 +146,31 @@ void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg)
 	// }
 }
 
+void OverlayWidget::tracker_status(const std_msgs::Bool::ConstPtr& msg)
+{
+	if (!msg->data)
+	{
+		std::string tracker_flag1 = "TRAKERS DISCONNECTED"; 
+		ui->label_3->clear();
+		ui->label_3->setText(tracker_flag1.c_str());
+		ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
+		ui->label_3->show();
+		
+		// std::string tracker_flag = "TRAKERS CONNECTED";
+		// ui->label_3->clear();
+		// ui->label_3->setText(tracker_flag.c_str());
+		// ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
+		// ui->label_3->show();
+	}
+	// else if (msg != false)
+	// {
+	// 	std::string tracker_flag1 = "TRAKERS DISCONNECTED"; 
+	// 	ui->label_3->clear();
+	// 	ui->label_3->setText(tracker_flag1.c_str());
+	// 	ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
+	// 	ui->label_3->show();
+	// }
+}
 void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
 {
     cv_bridge::CvImagePtr cv_ptr;
@@ -133,11 +193,11 @@ void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
 
     qt_image = QImage((const unsigned char*) (cv_ptr->image.data), cv_ptr->image.cols, cv_ptr->image.rows, QImage::Format_RGB888);
 
-	std::cout << cv_ptr->image.cols << std::endl;
-	std::cout << cv_ptr->image.rows << std::endl;
+	// std::cout << cv_ptr->image.cols << std::endl;
+	// std::cout << cv_ptr->image.rows << std::endl;
 
     ui->label->setPixmap(QPixmap::fromImage(qt_image));
-
+	// ui->label->pixmap();
     ui->label->resize(ui->label->pixmap()->size());
 }
 
@@ -260,9 +320,9 @@ bool OverlayController::Init()
 
 	if( bSuccess )
 	{
-		vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.2f );
+		vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.6f );
         vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
-		vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.9);
+		vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.8);
 		vr::VROverlay()->ShowOverlay(m_ulOverlayHandle);
 	}
 	std::cout << "44" << std::endl;
@@ -450,6 +510,26 @@ void OverlayController::MoveOverlayDown()
 {
 	transform.m[1][3]= transform.m[1][3] - 0.01;
 	std::cout << transform.m[1][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayFront()
+{
+	transform.m[2][3]= transform.m[2][3] + 0.01;
+	std::cout << transform.m[2][3] << std::endl;
+	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void OverlayController::MoveOverlayBack()
+{
+	transform.m[2][3]= transform.m[2][3] - 0.01;
+	std::cout << transform.m[2][3] << std::endl;
 	vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
 }
 

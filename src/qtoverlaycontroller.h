@@ -49,9 +49,13 @@ class OverlayWidget : public QWidget
 public:
     explicit OverlayWidget(QWidget *parent = 0);
     ~OverlayWidget();
-    void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg);
+    
 	void OverlayWidget::WInit();
+
+	void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg);
 	void OverlayWidget::commandCallback(const std_msgs::String::ConstPtr& msg);
+	void OverlayWidget::update_status(const std_msgs::String::ConstPtr& msg);
+	void OverlayWidget::tracker_status(const std_msgs::Bool::ConstPtr& msg);
 //private slots:
 
 
@@ -60,6 +64,8 @@ private:
 	int argc;
 	char **argv;
     Ui::OverlayWidget *ui;
+	static const uint32_t trackerNum = 6;
+
 
     QImage qt_image;
 };
@@ -99,6 +105,8 @@ public:
 	void OverlayController::MoveOverlayLeft();
 	void OverlayController::MoveOverlayUp();
 	void OverlayController::MoveOverlayDown();
+	void OverlayController::MoveOverlayFront();
+	void OverlayController::MoveOverlayBack();
 	void OverlayController::ChangeOpacity(float number);
 	
 

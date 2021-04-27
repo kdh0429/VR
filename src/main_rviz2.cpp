@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-    //ros::init(argc, argv, "image_rviz");
+    ros::init(argc, argv, "image_rviz");
     QApplication a(argc, argv);
     std::cout << "11" << std::endl;
     OverlayWidget *pOverlayWidget = new OverlayWidget;

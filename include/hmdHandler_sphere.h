@@ -9,6 +9,13 @@
 #ifndef hmdHandler_h
 #define hmdHandler_h
 
+#include <iostream>
+#include <chrono>
+
+#define NUM_RINGS_SPHERE 160
+#define NUM_SECTORS_SPHERE 160
+#define OFFSET_TO_CENTER 0.0f
+
 // Initiate VR system as a VRApplication_Scene mode
 // VRApplication_Scene mode : A 3D Application that will draw an environment.
 // IVRSystem : provides primary data such as display configuration data, tracking data, distortion state, controller states, device properties
@@ -65,6 +72,9 @@ static const Face facesTable[6] = {
 		{ CubeFaceName::Top,    {        0.f, -M_HALF_PI } },
 		{ CubeFaceName::Bottom, {        0.f, +M_HALF_PI } },
 };
+
+
+
 
 
 
@@ -154,7 +164,7 @@ public:
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
-	int targetDim = 800;  // this means hmd resolution. it is related with fps.
+	int targetDim = 512;  // this means hmd resolution. it is related with fps.
 	MapCoord LEFT_MAP_COORDS[CubeFaceName::NumFaces];
 	MapCoord RIGHT_MAP_COORDS[CubeFaceName::NumFaces];
 
@@ -203,10 +213,13 @@ public:
 
 	bool SetupTexturemaps();
 
-	void SetupScene();
+	
 	void AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag);
 	void AddCubeVertex(float fl0, float fl1, float fl2, float fl3, float fl4, std::vector<float>& vertdata);
 	void AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata);
+
+	void SetupSceneSphere();
+	void AddSphereToScene(std::vector<float> &vertdata, std::vector<unsigned short> &inddata);
 
 	bool SetupStereoRenderTargets();
 	void SetupCompanionWindow();
@@ -293,15 +306,17 @@ public: // OpenGL book keeping
 	float m_fNearClip;
 	float m_fFarClip;
 
-	GLuint m_Texture1[6];
-	GLuint m_Texture2[6];
+	GLuint m_iTexture1;
+	GLuint m_iTexture2;
 
-	unsigned int m_uiVertcount[6];
+
+	unsigned int m_uiVertcount;
 	
 
-	GLuint m_glSceneVertBuffer[6];
+	GLuint m_glSceneVertBuffer;
+	GLuint m_glSphereElementBuffer;
 
-	GLuint m_unSceneVAO[6];
+	GLuint m_unSceneVAO;
 
 
 

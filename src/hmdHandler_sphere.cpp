@@ -1,6 +1,76 @@
-#include "hmdHandler.h"
+#include "hmdHandler_sphere.h"
+
+struct SolidSphere
+{
+	std::vector<float> vertices;
+	std::vector<float> normals;
+	std::vector<float> texcoords;
+	std::vector<unsigned short> indices;
+
+	SolidSphere::SolidSphere(float radius, unsigned int rings, unsigned int sectors)
+	{
+		// Sector percentage MUST be between 0 and 50 %; number of sectors must be divisible by 4
+		float sector_percentage = 1.0f; //0.22f;//0.4f;
+		float ring_percentage = 1.0f; //0.35f;//0.5f;
+
+		unsigned int active_rings = ring_percentage * (float)rings;
+		unsigned int active_sectors = sector_percentage * (float)sectors;
+
+		float const R = 1.0f / (float)(rings - 1);
+		float const AR = 1.0f / (float)(active_rings - 1);
+
+		float const S = 1.0f / (float)(sectors - 1);
+		float const AS = 1.0f / (float)(active_sectors - 1);
+
+		int r, s;
+
+		vertices.resize(active_rings * active_sectors * 3);
+		normals.resize(active_rings * active_sectors * 3);
+		texcoords.resize(active_rings * active_sectors * 2);
+		std::vector<float>::iterator v = vertices.begin();
+		std::vector<float>::iterator n = normals.begin();
+		std::vector<float>::iterator t = texcoords.begin();
+		for (r = rings / 2 - active_rings / 2; r < rings / 2 + active_rings / 2; r++) {
+			for (s = (sectors * 3 / 4) - active_sectors / 2; s < (sectors * 3 / 4) + active_sectors / 2; s++) { /* only right part is rendered - change it somehow s.t. left part is also rendered; this is also bound to sector_percentage = 0.25*/
+				float y = sin(-M_PI / 2.0 + M_PI * r * R); // +radius / 4.0f; // offsetting by radius 
+				float x = cos(2 * M_PI * s * S) * sin(M_PI * r * R);
+				float z = sin(2 * M_PI * s * S) * sin(M_PI * r * R) - 1.0 + OFFSET_TO_CENTER * radius;
+
+				// Rotating 180 degrees for reasons 
+				// x = -x;
+				// z = -z;
+				y = -y;
+				*t++ = (s - (sectors * 3 / 4) + active_sectors / 2)*AS;
 
 
+				//*t++ = (s - sectors / 2 - active_sectors) * AS;
+
+				//*t++ = r*R;
+				*t++ = ((r - rings / 2 + active_rings / 2)) * AR;
+
+				*v++ = x * radius;
+				*v++ = y * radius;
+				*v++ = z * radius;
+
+				*n++ = x;
+				*n++ = y;
+				*n++ = z;
+			}
+		}
+
+		indices.resize((active_rings - 1) * (active_sectors - 1) * 4);
+		std::vector<unsigned short>::iterator i = indices.begin();
+		for (r = 0; r < active_rings - 1; r++) {
+			for (s = 0; s < active_sectors - 1; s++) {
+				*i++ = r * active_sectors + s;
+				*i++ = r * active_sectors + (s + 1);
+				*i++ = (r + 1) * active_sectors + (s + 1);
+				*i++ = (r + 1) * active_sectors + s;
+			}
+		}
+	}
+
+};
 
 void ThreadSleep(unsigned long nMilliseconds)
 {
@@ -45,7 +115,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -239,26 +309,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     t1.join();
     t2.join();
     
-    // end = clock();
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time(decode) : " << time << std::endl;
-
-    // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
-    // if (right_len < 0 || !gotFrame) {
-    //     std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
-    //     hmdPtr->is_stream_process_finished_r = true;
-    //     return;
-    // }
-
-    // std::thread decode_thread_l(decode_thread_func_l,streamPtr,hmdPtr,streamPacket,gotFrame_l,left_len);
-    // std::thread decode_thread_r(decode_thread_func_r,streamPtr,hmdPtr,streamPacket,gotFrame_r,right_len);
-
-    // decode_thread_l.join();
-    // decode_thread_r.join();
-
-    // int gotFrame = gotFrame_l * gotFrame_r;
-    
-    // stream_packet_mutex.unlock();
+ 
     
     
     // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.03초 
@@ -271,15 +322,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     hmdPtr->rightCvEquirect = cv::Mat(hmdPtr->height, hmdPtr->width, CV_8UC3);
     (hmdPtr->rightDat).data[0] = (uint8_t*)(hmdPtr->rightCvEquirect).data;
     
-    //avpicture_fill((AVPicture*)&dst, dst.data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
 
-
-
-    // if (left_len < 0 || !gotFrame) {
-    //     std::cout << "Could not Decode ricoh H264 stream" << std::endl;
-    //     hmdPtr->is_stream_process_finished = true;
-    //     return;
-    // }
 
     hmdPtr->left_Pixfmt = (enum AVPixelFormat)streamPtr->ricohleftFrame->format;
     hmdPtr->right_Pixfmt = (enum AVPixelFormat)streamPtr->ricohrightFrame->format;
@@ -313,86 +356,28 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
-
-    // start = clock();
-    
-    std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
-    std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
-    // std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
-    // std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
-    // std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
-    // std::cout << "cubeheight : " << hmdPtr->LeftcubeBack.rows << std::endl;
-    // createcubemapface 0.016초 소요
-    //cube_threads.clear();
-    
-    left_cube.join();
-    right_cube.join();
-
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time(createcube) : " << time << std::endl;
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0});
-
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1});
-
-    //for (auto &tmp : cube_threads) tmp.join();
-    
-
-    
-    //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
-    //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
-    
-    
-    
-    //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
-    
-    //cv::flip등의 처리 0.007초 소요//
-
-
-
-//// left
-
-//////
-
-
-    //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
-    //cv::resize(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
-    //cv::imshow("left equirect", hmdPtr->leftCvEquirect);
-    //cv::imshow("right equirect", hmdPtr->rightCvEquirect);
-
-
+    cv::cvtColor(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, CV_BGR2RGBA);
+    cv::cvtColor(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, 1);
+    // cv::flip(hmdPtr->rightCvEquirect, hmdPtr->rightCvEquirect, 1);
    
-   /* cv::imshow("LEFT back face", hmdPtr->LeftcubeBack);
-    cv::imshow("LEFT left face", hmdPtr->LeftcubeLeft);
-    cv::imshow("LEFT Right face", hmdPtr->LeftcubeRight);
-    cv::imshow("LEFT Top face", hmdPtr->LeftcubeTop);
-    cv::imshow("LEFT Bottom face", hmdPtr->LeftcubeBottom);
+    std::cout << hmdPtr->leftCvEquirect.cols << std::endl;
+    std::cout << hmdPtr->leftCvEquirect.rows << std::endl;
+    std::cout << hmdPtr->rightCvEquirect.cols << std::endl;
+    std::cout << hmdPtr->rightCvEquirect.rows << std::endl;
 
-    cv::imshow("RIGHT back face", hmdPtr->RightcubeBack);
-    cv::imshow("RIGHT left face", hmdPtr->RightcubeLeft);
-    cv::imshow("RIGHT Right face", hmdPtr->RightcubeRight);
-    cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
-    cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
-    //cv::imshow("rviz", hmdPtr->RvizScreen);
+    cv::imshow("left equirext", hmdPtr->leftCvEquirect);
+
+    
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time : " << time << std::endl;
-    // std::cout << "fps : " << (double)1/time << std::endl;
-    // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
-    // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
+    std::cout << "time : " << time << std::endl;
+    std::cout << "fps : " << (double)1/time << std::endl;
+    std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
+    std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
     //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
-    hmdPtr->first_data = false;
+    
     hmdPtr->is_stream_process_finished = true;
 }
 
@@ -412,7 +397,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     }
     else
     {
-        // ROS_WARN("st ream data is not processed yet");
+        ROS_WARN("stream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -638,29 +623,28 @@ bool HMD::SetupTexturemaps()
         return false;
     }
     //std::cout << imageRGBA.size() << std::endl; 
-    for (int i = 0; i < 6; i++) {
-        glGenTextures(1, &m_Texture1[i]);
-        glGenTextures(1, &m_Texture2[i]);
-        glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
-        glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
+
+    glGenTextures(1, &m_iTexture1);
+    glGenTextures(1, &m_iTexture2);
+    glBindTexture(GL_TEXTURE_2D, m_iTexture1);
+    glBindTexture(GL_TEXTURE_2D, m_iTexture2);
 
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, nImageWidth, nImageHeight,
-            0, GL_RGBA, GL_UNSIGNED_BYTE, &imageRGBA[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, nImageWidth, nImageHeight,
+        0, GL_RGBA, GL_UNSIGNED_BYTE, &imageRGBA[0]);
 
-        glGenerateMipmap(GL_TEXTURE_2D);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    GLfloat fLargest;
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
 
-        GLfloat fLargest;
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
     return true;
 }
 
@@ -792,78 +776,108 @@ void HMD::AddScreenToScene(Matrix4 mat, std::vector<float>& vertdata)
     AddCubeVertex(J.x, J.y, J.z, 0, 1, vertdata);
 }
 
+void HMD::AddSphereToScene(std::vector<float> &vertdata, std::vector<unsigned short> &inddata) {
 
+
+	SolidSphere sphere(5, NUM_RINGS_SPHERE, NUM_SECTORS_SPHERE);
+
+	std::cout << "Number of vertices - textures " << sphere.vertices.size() << " " << sphere.texcoords.size() << std::endl;
+	for (auto ix = 0; ix < sphere.vertices.size() / 3; ++ix) {
+		vertdata.push_back(sphere.vertices[3 * ix + 0]);
+		vertdata.push_back(sphere.vertices[3 * ix + 1]);
+		vertdata.push_back(sphere.vertices[3 * ix + 2]);
+
+		vertdata.push_back(sphere.texcoords[2 * ix + 0]);
+		vertdata.push_back(sphere.texcoords[2 * ix + 1]);
+
+		//std::cout << sphere.vertices[3 * ix + 0] << " " << sphere.vertices[3 * ix + 1] << " " << sphere.vertices[3 * ix + 2] << std::endl;
+	}
+
+	//std::cin.get();
+	std::cout << "Number of indices " << sphere.indices.size() << std::endl;
+	for (auto ix = 0; ix < sphere.indices.size() / 4 /*- 80*/; ++ix) {
+		inddata.push_back(sphere.indices[4 * ix + 0]);
+		inddata.push_back(sphere.indices[4 * ix + 1]);
+		inddata.push_back(sphere.indices[4 * ix + 2]);
+
+		inddata.push_back(sphere.indices[4 * ix + 0]);
+		inddata.push_back(sphere.indices[4 * ix + 2]);
+		inddata.push_back(sphere.indices[4 * ix + 3]);
+	}
+
+	//std::copy(sphere.indices.begin(), sphere.indices.end(), std::back_inserter(inddata));
+
+
+}
 
 
 /* create sea of cubes */
-void HMD::SetupScene()
+
+
+void HMD::SetupSceneSphere() 
 {
-    if (!VRSystem) {
-        std::cout << "Setup scene process failed.. program exit" << std::endl;
-        return;
-    }
+	if (!VRSystem)
+		return;
 
-    std::vector<std::vector<float>> vertdataarrays;
-    for (int i = 0; i < 6; i++) {
-        std::vector<float> array;
-        vertdataarrays.push_back(array);
-    }
+	std::vector<float> vertdataarray;
+	std::vector<unsigned short> vertindarray;
 
-    Matrix4 matScale;
-    matScale.scale(m_fScale, m_fScale, m_fScale);
-    Matrix4 matTransform;
-    matTransform.translate(
-        -((float)m_iSceneVolumeWidth * m_fScaleSpacingWidth) / 2.f,
-        -((float)m_iSceneVolumeHeight * m_fScaleSpacingHeight) / 2.f,
-        -((float)m_iSceneVolumeDepth * m_fScaleSpacingDepth) / 2.f);
+	Matrix4 matScale;
+	matScale.scale( m_fScale, m_fScale, m_fScale );
+	Matrix4 matTransform;
+	matTransform.translate(
+		-( (float)m_iSceneVolumeWidth * m_fScaleSpacingWidth ) / 2.f,
+		-( (float)m_iSceneVolumeHeight * m_fScaleSpacingHeight ) / 2.f,
+		-( (float)m_iSceneVolumeDepth * m_fScaleSpacingDepth ) / 2.f);
+	
+	
+	Matrix4 mat = matScale * matTransform;
 
-    
-    
-    for (int i = 0; i < 6; i++) {
+	for( int z = 0; z< m_iSceneVolumeDepth; z++ )
+	{
+		for( int y = 0; y< m_iSceneVolumeHeight; y++ )
+		{
+			for( int x = 0; x< m_iSceneVolumeWidth; x++ )
+			{
+				AddSphereToScene(vertdataarray, vertindarray);		
+				mat = mat * Matrix4().translate( m_fScaleSpacing, 0, 0 );
+			}
+			mat = mat * Matrix4().translate( -((float)m_iSceneVolumeWidth) * m_fScaleSpacing, m_fScaleSpacing, 0 );
+		}
+		mat = mat * Matrix4().translate( 0, -((float)m_iSceneVolumeHeight) * m_fScaleSpacing, m_fScaleSpacing );
+	}
+	// AddSphereToScene(vertdataarray, vertindarray);
+	
+	// m_uiVertcount = vertdataarray.size() / 5;
+	m_uiVertcount = vertindarray.size() ;
+	std::cout << "m_uiVertcount" << m_uiVertcount << std::endl;
+	std::cout << "vertdataarrays:" << vertdataarray[0] << std::endl;
+	std::cout << "vertdataarrays:" << vertdataarray[1] << std::endl;
 
-        Matrix4 mat = matScale * matTransform;
+	glGenVertexArrays(1, &m_unSceneVAO);
+	glBindVertexArray(m_unSceneVAO);
 
-        for (int z = 0; z < m_iSceneVolumeDepth; z++)
-        {
-            for (int y = 0; y < m_iSceneVolumeHeight; y++)
-            {
-                for (int x = 0; x < m_iSceneVolumeWidth; x++)
-                {
-                    if (i < 6) {
-                        AddCubeToScene(mat, vertdataarrays[i], i);
-                    }
-                    else {
-                        AddScreenToScene(mat, vertdataarrays[i]);
-                    }
-                    mat = mat * Matrix4().translate(m_fScaleSpacing, 0, 0);
-                }
-                mat = mat * Matrix4().translate(-((float)m_iSceneVolumeWidth) * m_fScaleSpacing, m_fScaleSpacing, 0);
-            }
-            mat = mat * Matrix4().translate(0, -((float)m_iSceneVolumeHeight) * m_fScaleSpacing, m_fScaleSpacing);
-        }
-        m_uiVertcount[i] = vertdataarrays[i].size() / 5;
+	glGenBuffers(1, &m_glSceneVertBuffer);
+	glGenBuffers(1, &m_glSphereElementBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, m_glSceneVertBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarray.size(), &vertdataarray[0], GL_STATIC_DRAW);
 
-        glGenVertexArrays(1, &m_unSceneVAO[i]);
-        glBindVertexArray(m_unSceneVAO[i]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_glSphereElementBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertindarray.size() * sizeof(unsigned short), vertindarray.data(), GL_STATIC_DRAW);
 
-        glGenBuffers(1, &m_glSceneVertBuffer[i]);
-        glBindBuffer(GL_ARRAY_BUFFER, m_glSceneVertBuffer[i]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertdataarrays[i].size(), &vertdataarrays[i][0], GL_STATIC_DRAW);
+	GLsizei stride = sizeof(VertexDataScene);
+	uintptr_t offset = 0;
 
-        GLsizei stride = sizeof(VertexDataScene);
-        uintptr_t offset = 0;
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (const void *)offset);
 
-        glEnableVertexAttribArray(0); //////
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (const void*)offset);
+	offset += sizeof(Vector3);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (const void *)offset);
 
-        offset += sizeof(Vector3);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (const void*)offset);
-
-        glBindVertexArray(0);
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-    }
+	glBindVertexArray(0);
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 }
 
 Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
@@ -873,11 +887,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-    // for (int i =0; i<4 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<4 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+        }
+    }
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -913,11 +927,11 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.
         
     }
 
-    // for (int i =0; i<3 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+        }
+    }
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -1440,8 +1454,8 @@ void HMD::init() {
     m_strDriver = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String);
     m_strDisplay = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String);
 
-    // std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
-    // SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
+    std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
+    SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
 
     // cube array
     m_iSceneVolumeWidth = m_iSceneVolumeInit;
@@ -1449,13 +1463,13 @@ void HMD::init() {
     m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
     //cube size
-    m_fScale = 6.0f;
+    m_fScale = 5.0f;
 
     m_fScaleSpacing = 0;
 
     //cube position
-    m_fScaleSpacingWidth = 0;
-    m_fScaleSpacingHeight = 0.5;
+    m_fScaleSpacingWidth = 5.0f;
+    m_fScaleSpacingHeight = 0;
     m_fScaleSpacingDepth = 0;
 
     m_fNearClip = 0.5f;
@@ -1473,7 +1487,9 @@ void HMD::init() {
     checkConnection();                                        
     //ros::Duration(5.0).sleep();
     SetupTexturemaps();
-    SetupScene();
+    //SetupScene();
+    SetupSceneSphere();
+
     SetupCameras();
     SetupStereoRenderTargets();
     SetupCompanionWindow();
@@ -1535,6 +1551,7 @@ void HMD::ROSTasks()
 void HMD::RunMainLoop()
 {   
     bool bQuit = false;
+
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
     //loop_tick_ = 0;
@@ -1593,103 +1610,45 @@ void HMD::RenderFrame()
         r.sleep();
         // for now as fast as possible
         
-        if (first_data) //// 없어도 작동함//
-        {
-            continue;
-        }
+        
 
         render_mutex.lock();
-        for (int i = 0; i < 6; i++) {
-            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
-            switch (i) {
-            case 0:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeFront.data[0]);
-                break;
-            case 1:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBack.cols, LeftcubeBack.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBack.data[0]);
-                break;
-            case 2:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeTop.cols, LeftcubeTop.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeTop.data[0]);
-                break;
-            case 3:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeBottom.cols, LeftcubeBottom.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeBottom.data[0]);
-                break;
-            case 4:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeLeft.cols, LeftcubeLeft.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeLeft.data[0]);
-                break;
-            case 5:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
-                break;
-            }
-            
-            glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, m_iTexture1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, leftCvEquirect.cols, leftCvEquirect.rows,
+            0, GL_RGBA, GL_UNSIGNED_BYTE, &leftCvEquirect.data[0]);
+                        
+        glGenerateMipmap(GL_TEXTURE_2D);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        GLfloat fLargest;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
 
-            GLfloat fLargest;
-            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
-            glBindTexture(GL_TEXTURE_2D, 0);
+        
 
-        }
-        // std::cout << "width : " << LeftcubeBack.cols << std::endl;
-        // std::cout << "width : " << LeftcubeTop.cols << std::endl;
-        // std::cout << "height : " << LeftcubeBack.rows << std::endl;
-        // std::cout << "height : " << LeftcubeTop.rows << std::endl;
 /////////////////////////////////right/////////////////
-        for (int i = 0; i < 6; i++) {
-            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
-            switch (i) {
-            case 0:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeFront.cols, RightcubeFront.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeFront.data[0]);
-                break;
-            case 1:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBack.cols, RightcubeBack.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBack.data[0]);
-                break;
-            case 2:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeTop.cols, RightcubeTop.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeTop.data[0]);
-                break;
-            case 3:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBottom.cols, RightcubeBottom.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBottom.data[0]);
-                break;
-            case 4:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeLeft.cols, RightcubeLeft.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeLeft.data[0]);
-                break;
-            case 5:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeRight.cols, RightcubeRight.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeRight.data[0]);
-                break;
-            }
+        glBindTexture(GL_TEXTURE_2D, m_iTexture2);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rightCvEquirect.cols, rightCvEquirect.rows,
+            0, GL_RGBA, GL_UNSIGNED_BYTE, &rightCvEquirect.data[0]);
+        
             
-            glGenerateMipmap(GL_TEXTURE_2D);
+        glGenerateMipmap(GL_TEXTURE_2D);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
-            GLfloat fLargest;
-            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+        GLfloat fLargest1;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest1);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest1);
 
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-        }
+        glBindTexture(GL_TEXTURE_2D, 0);
         //////////////////////////////////////////////
 
         if (VRSystem)
@@ -1918,19 +1877,15 @@ void HMD::RenderScene1(vr::Hmd_Eye nEye)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    if (m_bShowCubes)
+    if (true)
     {
         glUseProgram(m_unSceneProgramID);
-        glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        // 7 -> 6로 변경. 
-        ///여기 지우면 안나옴.
-        for (int i = 0; i < 6; i++) {
-            glBindVertexArray(m_unSceneVAO[i]);
-            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
-            glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
-            glBindVertexArray(0);
-        }
-        ///
+		glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+        glBindVertexArray(m_unSceneVAO);
+		glBindTexture(GL_TEXTURE_2D, m_iTexture1);
+		glDrawElements(GL_TRIANGLES, m_uiVertcount, GL_UNSIGNED_SHORT, NULL);
+		glBindVertexArray(0);
+
     }
 
     bool bIsInputAvailable = VRSystem->IsInputAvailable();
@@ -1969,19 +1924,14 @@ void HMD::RenderScene2(vr::Hmd_Eye nEye)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     
-    if (m_bShowCubes)
+    if (true)
     {
         glUseProgram(m_unSceneProgramID);
-        glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        
-        ///여기 지우면 안나옴.
-        for (int i = 0; i < 6; i++) {
-            glBindVertexArray(m_unSceneVAO[i]);
-            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
-            glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
-            glBindVertexArray(0);
-        }
-        ///
+		glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+		glBindVertexArray(m_unSceneVAO);
+		glBindTexture(GL_TEXTURE_2D, m_iTexture2);
+		glDrawElements(GL_TRIANGLES, m_uiVertcount, GL_UNSIGNED_SHORT, NULL);
+		glBindVertexArray(0);
     }
 
     bool bIsInputAvailable = VRSystem->IsInputAvailable();
@@ -2243,7 +2193,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // run actual resampling using OpenCV's remap
-    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
     return ;
 }

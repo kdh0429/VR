@@ -45,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -318,10 +318,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
     std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
-    // std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
-    // std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
-    // std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
-    // std::cout << "cubeheight : " << hmdPtr->LeftcubeBack.rows << std::endl;
+    std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
+    std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
+    std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
+    std::cout << "cubeheight : " << hmdPtr->LeftcubeBack.rows << std::endl;
     // createcubemapface 0.016초 소요
     //cube_threads.clear();
     
@@ -386,10 +386,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     //cv::imshow("rviz", hmdPtr->RvizScreen);
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time : " << time << std::endl;
-    // std::cout << "fps : " << (double)1/time << std::endl;
-    // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
-    // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
+    std::cout << "time : " << time << std::endl;
+    std::cout << "fps : " << (double)1/time << std::endl;
+    std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
+    std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
     //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
     hmdPtr->first_data = false;
@@ -412,7 +412,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     }
     else
     {
-        // ROS_WARN("st ream data is not processed yet");
+        ROS_WARN("stream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -873,11 +873,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-    // for (int i =0; i<4 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<4 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+        }
+    }
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -913,11 +913,11 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.
         
     }
 
-    // for (int i =0; i<3 ; i++){
-    //     for (int j = 0; j < 4 ; j++){
-    //         std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
-    //     }
-    //}
+    for (int i =0; i<3 ; i++){
+        for (int j = 0; j < 4 ; j++){
+            std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+        }
+    }
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -1487,12 +1487,13 @@ void HMD::init() {
 
     std::cout << "VR Compositor Initialization Success!" << std::endl;
     
+    cv::VideoCapture cap(0);
+    
 
 
-
-    ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
-                                                            1, 
-                                                            boost::bind(streamCallback, _1, &streamObj, this));
+    // ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
+    //                                                         1, 
+    //                                                         boost::bind(streamCallback, _1, &streamObj, this));
                                                             //ros::TransportHints().udp());
     hmd_para_sub = node.subscribe("/tocabi/dg/vr_caliabration_param", 10, &HMD::hmd_para_callback, this);
    
@@ -1535,6 +1536,7 @@ void HMD::ROSTasks()
 void HMD::RunMainLoop()
 {   
     bool bQuit = false;
+
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
     //loop_tick_ = 0;
