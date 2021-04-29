@@ -14,8 +14,6 @@
 
 #include "ui_widget.h"
 
-// #include <speechapi_cxx.h>
-// using namespace Microsoft::CognitiveServices::Speech;
 #include <vector>
 
 using namespace vr;
@@ -32,7 +30,7 @@ OverlayWidget::OverlayWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     
-	std::cout << "22" << std::endl;
+	std::cout << "UI setup" << std::endl;
 }
 
 OverlayWidget::~OverlayWidget()
@@ -42,8 +40,7 @@ OverlayWidget::~OverlayWidget()
 
 void OverlayWidget::WInit()
 {
-	//ros::init(argc, argv, "image_rviz");
-	std::cout << "88" << std::endl;
+	std::cout << "overlay image subscribing..." << std::endl;
     ros::NodeHandle nh;
 
     image_transport::ImageTransport it(nh);
@@ -177,8 +174,7 @@ void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
     try
     {
       cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	  std::cout << "OK1" << std::endl;
-    }
+	}
     catch (cv_bridge::Exception& e)
     {
       ROS_ERROR("cv_bridge exception: %s", e.what());
@@ -189,8 +185,6 @@ void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
     cv::imshow("rviz_image", cv_ptr->image);
     cv::waitKey(3);
 
-	std::cout << "OK" << std::endl;
-
     qt_image = QImage((const unsigned char*) (cv_ptr->image.data), cv_ptr->image.cols, cv_ptr->image.rows, QImage::Format_RGB888);
 
 	// std::cout << cv_ptr->image.cols << std::endl;
@@ -199,6 +193,7 @@ void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
     ui->label->setPixmap(QPixmap::fromImage(qt_image));
 	// ui->label->pixmap();
     ui->label->resize(ui->label->pixmap()->size());
+	
 }
 
 
@@ -325,7 +320,7 @@ bool OverlayController::Init()
 		vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.8);
 		vr::VROverlay()->ShowOverlay(m_ulOverlayHandle);
 	}
-	std::cout << "44" << std::endl;
+	std::cout << "Overlay setup complete" << std::endl;
 	return true;
 }
 
@@ -375,7 +370,7 @@ void OverlayController::OnSceneChanged( const QList<QRectF>& )
         vr::Texture_t texture = {(void*)(uintptr_t)unTexture, vr::TextureType_OpenGL, vr::ColorSpace_Auto };
         vr::VROverlay()->SetOverlayTexture( m_ulOverlayHandle, &texture );
 	}
-	std::cout << "00" << std::endl;
+	std::cout << "scene update" << std::endl;
 }
 
 //-----------------------------------------------------------------------------

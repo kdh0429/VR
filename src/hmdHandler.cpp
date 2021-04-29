@@ -45,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -1767,7 +1767,7 @@ void HMD::UpdateHMDMatrixPose()
         {
             m_iValidPoseCount++;
             //if(VRSystem->GetTrackedDeviceClass(nDevice) == vr::TrackedDeviceClass_HMD)
-              //  std::cout << m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking.m[2][3] << std::endl;
+                //  std::cout << m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking.m[2][3] << std::endl;
 
             m_rmat4DevicePose[nDevice] = ConvertSteamVRMatrixToMatrix4(m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
             if (m_rDevClassChar[nDevice] == 0)
@@ -2243,7 +2243,7 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // run actual resampling using OpenCV's remap
-    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
     return ;
 }
