@@ -154,7 +154,7 @@ public:
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
-	int targetDim = 800;  // this means hmd resolution. it is related with fps.
+	int targetDim[6] = {1,1024,1024,1024,1,1024};//800;  // this means hmd resolution. it is related with fps.
 	MapCoord LEFT_MAP_COORDS[CubeFaceName::NumFaces];
 	MapCoord RIGHT_MAP_COORDS[CubeFaceName::NumFaces];
 
@@ -172,6 +172,7 @@ public:
 	// std::mutex stream_packet_mutex;
 	std::shared_ptr<std_msgs::UInt8MultiArray> stored_stream_packet;
 	std::thread process_stream_thread;
+
 
 /* vr component members */
 public:

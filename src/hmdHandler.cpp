@@ -69,67 +69,190 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 }
 
 
-
-//cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
-void createCubeMapFace_left_thread(HMD* hmdPtr)
-{
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
-
-    cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
-    cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
+//////////////left//////////////////
+void createCubeMapFace_leftFront(HMD* hmdPtr){
+    //hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
+    //cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
+    //cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
     
+}
+
+void createCubeMapFace_leftBack(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
     cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
     cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
-    cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
     
+}
+
+void createCubeMapFace_leftTop(HMD* hmdPtr){
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
+    // cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
+    // cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_leftRight(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
+    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
+    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_leftLeft(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
+    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
+    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_leftBottom(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
     cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
     cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
 
     cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
     
-    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
-    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
-    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
 }
 
+////////////right//////////////
 
-void createCubeMapFace_right_thread(HMD* hmdPtr)
-{
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
-    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
-
-    cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
-    cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
+void createCubeMapFace_rightFront(HMD* hmdPtr){
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1);
+    // cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
+    // cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
     
+}
+
+void createCubeMapFace_rightBack(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1);
     cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
     cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
-    cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
     
+}
+
+void createCubeMapFace_rightTop(HMD* hmdPtr){
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1);
+    // cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
+    // cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_rightRight(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1);
+    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
+    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_rightLeft(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1);
+    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
+    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_rightBottom(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
     cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
     cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
 
     cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
     
-    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
-    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
+}
+
+
+
+void createCubeMapFace_left_thread(HMD* hmdPtr)
+{
+
+    //std::thread lt1(createCubeMapFace_leftFront,hmdPtr);
+    std::thread lt2(createCubeMapFace_leftBack,hmdPtr);
+    //std::thread lt3(createCubeMapFace_leftTop,hmdPtr);
+    std::thread lt4(createCubeMapFace_leftRight,hmdPtr);
+    std::thread lt5(createCubeMapFace_leftLeft,hmdPtr);
+    std::thread lt6(createCubeMapFace_leftBottom,hmdPtr);
+
+    //lt1.join();
+    lt2.join();
+    //lt3.join();
+    lt4.join();
+    lt5.join();
+    lt6.join();
+
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
+
+    // cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
+    // cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
     
-    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
-    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
+    // cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
+    // cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
+    // cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    // cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
+    // cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
+    // cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
+}
+
+
+void createCubeMapFace_right_thread(HMD* hmdPtr)
+{
+    //std::thread rt1(createCubeMapFace_rightFront,hmdPtr);
+    std::thread rt2(createCubeMapFace_rightBack,hmdPtr);
+    //std::thread rt3(createCubeMapFace_rightTop,hmdPtr);
+    std::thread rt4(createCubeMapFace_rightRight,hmdPtr);
+    std::thread rt5(createCubeMapFace_rightLeft,hmdPtr);
+    std::thread rt6(createCubeMapFace_rightBottom,hmdPtr);
+
+    //rt1.join();
+    rt2.join();
+    //rt3.join();
+    rt4.join();
+    rt5.join();
+    rt6.join();
+
+
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 0);
+    // hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 0);
+
+    // cv::flip(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, 1);
+    // cv::cvtColor(hmdPtr->RightcubeFront, hmdPtr->RightcubeFront, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
+    // cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
+    // cv::flip(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, 1);
+    // cv::rotate(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
+    // cv::cvtColor(hmdPtr->RightcubeTop, hmdPtr->RightcubeTop, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
+    // cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    // cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
+    // cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
+    
+    // cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
+    // cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
 }
 
 void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
@@ -328,29 +451,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     left_cube.join();
     right_cube.join();
 
-    // end = clock();
-    // time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time(createcube) : " << time << std::endl;
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0});
-
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1});
-    // cube_threads.emplace_back(std::thread{&HMD::createCubeMapFace,hmdPtr, hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1});
-
-    //for (auto &tmp : cube_threads) tmp.join();
-    
-
-    
-    //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
-    //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
+   
     
     
     
@@ -626,7 +727,7 @@ bool HMD::CreateAllShaders()
 bool HMD::SetupTexturemaps()
 {
     std::string sExecutableDirectory = Path_StripFilename(Path_GetExecutablePath());
-    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png", sExecutableDirectory);
+    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panoramaa.jpg", sExecutableDirectory);
 
     std::vector<unsigned char> imageRGBA;
  
@@ -2150,16 +2251,16 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     // for each point in the target image, 
     // calculate the corresponding source coordinates
     if (!MAP_COORDS[index].isSet) {
-        MAP_COORDS[index].mapx = new cv::Mat(targetDim, targetDim, CV_32F);
-        MAP_COORDS[index].mapy = new cv::Mat(targetDim, targetDim, CV_32F);
+        MAP_COORDS[index].mapx = new cv::Mat(targetDim[index], targetDim[index], CV_32F);
+        MAP_COORDS[index].mapy = new cv::Mat(targetDim[index], targetDim[index], CV_32F);
         std::cout << "Create mapping arrays..." << std::endl;
-        for (int y = 0; y < targetDim; y++)
+        for (int y = 0; y < targetDim[index]; y++)
         {
-            for (int x = 0; x < targetDim; x++)
+            for (int x = 0; x < targetDim[index]; x++)
             {
                 // map face pixel coordinates to [-1, 1] on plane
-                float nx = (float)y / (float)targetDim - 0.5f;
-                float ny = (float)x / (float)targetDim - 0.5f;
+                float nx = (float)y / (float)targetDim[index] - 0.5f;
+                float ny = (float)x / (float)targetDim[index] - 0.5f;
 
                 nx *= 2;
                 ny *= 2;
@@ -2239,9 +2340,9 @@ void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // recreate output image if it has wrong size or type
-    if (face.cols != targetDim || face.rows != targetDim || face.type() != in.type())
+    if (face.cols != targetDim[index] || face.rows != targetDim[index] || face.type() != in.type())
     {
-        face = cv::Mat(targetDim, targetDim, in.type());
+        face = cv::Mat(targetDim[index], targetDim[index], in.type());
     }
 
     // run actual resampling using OpenCV's remap
