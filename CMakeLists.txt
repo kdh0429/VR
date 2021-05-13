@@ -84,7 +84,7 @@ add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler
 
 add_executable(overlay src/main_rviz2.cpp src/qtoverlaycontroller.cpp src/qtoverlaycontroller.h)
 
-add_executable(camera src/usbcamera.cpp)
+# add_executable(camera src/usbcamera.cpp)
 
 include_directories(C:/Users/Dyros/Desktop/avatar/src/VR/include)
 include_directories(${catkin_INCLUDE_DIRS})
@@ -143,4 +143,4 @@ target_link_libraries(overlay
 	C:/Users/Dyros/openvr-latest/lib/win64/openvr_api.lib
 )
 
-target_link_libraries(camera ${OpenCV_LIBRARIES})
+# target_link_libraries(camera ${OpenCV_LIBRARIES})
