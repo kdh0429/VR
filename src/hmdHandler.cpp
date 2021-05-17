@@ -2,7 +2,6 @@
 
 
 
-
 void ThreadSleep(unsigned long nMilliseconds)
 {
 #if defined(_WIN32)
@@ -46,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = true;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -69,8 +68,166 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 }
 
+
+//////////////left//////////////////
+
+void createCubeMapFace_leftBack(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
+    cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
+    cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
+    
+}
+
+
+void createCubeMapFace_leftRight(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
+    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
+    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_leftLeft(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
+    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
+    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_leftBottom(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
+    cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
+    cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
+    
+}
+
+////////////right//////////////
+
+
+void createCubeMapFace_rightBack(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1);
+    cv::flip(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, 1);
+    cv::cvtColor(hmdPtr->RightcubeBack, hmdPtr->RightcubeBack, CV_BGR2RGBA);
+    
+}
+
+
+void createCubeMapFace_rightRight(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1);
+    cv::flip(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, 1);
+    cv::cvtColor(hmdPtr->RightcubeRight, hmdPtr->RightcubeRight, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_rightLeft(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1);
+    cv::flip(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, 1);
+    cv::cvtColor(hmdPtr->RightcubeLeft, hmdPtr->RightcubeLeft, CV_BGR2RGBA);
+    
+}
+
+void createCubeMapFace_rightBottom(HMD* hmdPtr){
+    hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
+    cv::flip(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, 0);
+    cv::rotate(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    cv::cvtColor(hmdPtr->RightcubeBottom, hmdPtr->RightcubeBottom, CV_BGR2RGBA);
+    
+}
+
+
+
+void createCubeMapFace_left_thread(HMD* hmdPtr)
+{
+
+    //std::thread lt1(createCubeMapFace_leftFront,hmdPtr);
+    std::thread lt2(createCubeMapFace_leftBack,hmdPtr);
+    //std::thread lt3(createCubeMapFace_leftTop,hmdPtr);
+    std::thread lt4(createCubeMapFace_leftRight,hmdPtr);
+    std::thread lt5(createCubeMapFace_leftLeft,hmdPtr);
+    std::thread lt6(createCubeMapFace_leftBottom,hmdPtr);
+
+    //lt1.join();
+    lt2.join();
+    //lt3.join();
+    lt4.join();
+    lt5.join();
+    lt6.join();
+
+
+}
+
+
+void createCubeMapFace_right_thread(HMD* hmdPtr)
+{
+    //std::thread rt1(createCubeMapFace_rightFront,hmdPtr);
+    std::thread rt2(createCubeMapFace_rightBack,hmdPtr);
+    //std::thread rt3(createCubeMapFace_rightTop,hmdPtr);
+    std::thread rt4(createCubeMapFace_rightRight,hmdPtr);
+    std::thread rt5(createCubeMapFace_rightLeft,hmdPtr);
+    std::thread rt6(createCubeMapFace_rightBottom,hmdPtr);
+
+    //rt1.join();
+    rt2.join();
+    //rt3.join();
+    rt4.join();
+    rt5.join();
+    rt6.join();
+
+
+
+}
+
+void HMD::hmd_para_callback(const std_msgs::Float32MultiArray data)
+{
+    // if ((data.data[0]) != depth){
+    //     depth = data.data[0];
+    //     m_fScaleSpacing = depth;
+    //     //CreateAllShaders();
+    //     SetupTexturemaps();
+    //     SetupScene();
+    //     SetupCameras();
+    //     SetupStereoRenderTargets();
+    //     SetupCompanionWindow();
+    //     if (!vr::VRCompositor()) {
+    //     std::cout << "Compositor initialization failed" << std::endl; // it doesn't work
+    //     return;
+    // }
+    // }
+    eye_angle = data.data[0] - 0.5;
+    eye_angle_cali = eye_angle * 10 * M_PI / 180 ;// -5 to 5 degree
+    distance = data.data[1]; // 0~1
+    distance_cali = -0.15 +distance * 0.3; // you can change the disteance between eyes with distance_cali. MAX : 0.15, MIN : -0.15 // Best Condition : distance_cali == 0
+    
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, distance_cali, eye_angle_cali);
+    m_mat4eyePosRight =GetHMDMatrixPoseEye(vr::Eye_Right, distance_cali , eye_angle_cali); 
+
+}
+
+void decode_thread_l(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
+{
+    int left_len = avcodec_decode_video2(streamPtr->c_l, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    if (left_len < 0 || !gotFrame) {
+        std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished_l = true;
+        return; 
+    }
+}
+void decode_thread_r(ricohRos* streamPtr,HMD* hmdPtr,int gotFrame)
+{
+    int right_len = avcodec_decode_video2(streamPtr->c_r, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    if (right_len < 0 || !gotFrame) {
+        std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+        hmdPtr->is_stream_process_finished_r = true;
+        return;
+    }
+}
+
+
 void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 {
+
     // viz_stream_mutex.
     // hmdPtr->loop_tick_++;
     // if(hmdPtr->loop_tick_%10 != 0){
@@ -81,16 +238,17 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     
     clock_t start, end;
+    start = clock();
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
-    std::cout << "test" << std::endl;
+    //std::cout << "test" << std::endl;
     // cout << streamPtr->ricohPacket.size << endl;
     //memcpy(streamPtr->ricohPacket.data, tmp, streamPtr->ricohPacket.size);
 
-    streamPtr->ricohPacket.data = (uint8_t*)&(streamPacket->data[0]);
-    int gotFrame = 0;
-
+    
+    int gotFrame_l = 0, gotFrame_r = 0;
+    
     // std::scoped_lock<std::mutex> _(hmdPtr->render_mutex);
     // hmdPtr->render_mutex.lock
     if (!(hmdPtr->streamParamInit)) {
@@ -102,34 +260,55 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         hmdPtr->rightCvEquirect = cv::Mat(hmdPtr->height, hmdPtr->width, CV_8UC3);
         hmdPtr->rightDat.data[0] = (uint8_t*)(hmdPtr->rightCvEquirect).data;
 
+
         avpicture_fill((AVPicture*)&(hmdPtr->leftDat), (hmdPtr->leftDat).data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
         avpicture_fill((AVPicture*)&(hmdPtr->rightDat), (hmdPtr->rightDat).data[0], AV_PIX_FMT_BGR24, hmdPtr->width, hmdPtr->height);
 
         hmdPtr->streamParamInit = true;
     }
-    start = clock();
-    streamPtr->ricohPacket.size = streamPacket->layout.dim[3].size;
-    int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket));
-    if (left_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
-    gotFrame = 0;
 
-    streamPtr->ricohPacket.size = streamPacket->layout.dim[4].size;
-    streamPtr->ricohPacket.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    streamPtr->ricohPacket_l.data = (uint8_t*)&(streamPacket->data[0]);
+    streamPtr->ricohPacket_l.size = streamPacket->layout.dim[3].size;
+    
+    // int left_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohleftFrame, &gotFrame, &(streamPtr->ricohPacket_l));
+    // if (left_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode left ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_l = true;
+    //     return;
+    // }
+
+    //gotFrame = 0;
+    // start = clock();
+    streamPtr->ricohPacket_r.size = streamPacket->layout.dim[4].size;
+    streamPtr->ricohPacket_r.data = (uint8_t*)(&(streamPacket->data[0]) + streamPacket->layout.dim[3].size);
+    std::thread t1(decode_thread_l,streamPtr, hmdPtr,gotFrame_l);
+    std::thread t2(decode_thread_r,streamPtr, hmdPtr,gotFrame_r);
+    t1.join();
+    t2.join();
+    
+    // end = clock();
+    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    // std::cout << "time(decode) : " << time << std::endl;
+
+    // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
+    // if (right_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished_r = true;
+    //     return;
+    // }
+
+    // std::thread decode_thread_l(decode_thread_func_l,streamPtr,hmdPtr,streamPacket,gotFrame_l,left_len);
+    // std::thread decode_thread_r(decode_thread_func_r,streamPtr,hmdPtr,streamPacket,gotFrame_r,right_len);
+
+    // decode_thread_l.join();
+    // decode_thread_r.join();
+
+    // int gotFrame = gotFrame_l * gotFrame_r;
     
     // stream_packet_mutex.unlock();
     
-    int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket));
-    if (right_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode right ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
-
-    end = clock();
+    
+    // 여기 까지 2개의 avcodec_decode_video2 함수를 거치며 0.03초 
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
 
 
@@ -143,11 +322,11 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
 
 
-    if (left_len < 0 || !gotFrame) {
-        std::cout << "Could not Decode ricoh H264 stream" << std::endl;
-        hmdPtr->is_stream_process_finished = true;
-        return;
-    }
+    // if (left_len < 0 || !gotFrame) {
+    //     std::cout << "Could not Decode ricoh H264 stream" << std::endl;
+    //     hmdPtr->is_stream_process_finished = true;
+    //     return;
+    // }
 
     hmdPtr->left_Pixfmt = (enum AVPixelFormat)streamPtr->ricohleftFrame->format;
     hmdPtr->right_Pixfmt = (enum AVPixelFormat)streamPtr->ricohrightFrame->format;
@@ -181,49 +360,34 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
-    start = clock();
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeFront, CubeFaceName::Front, 0);
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBack, CubeFaceName::Back, 0);
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeLeft, CubeFaceName::Left, 0);
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeRight, CubeFaceName::Right, 0);
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeTop, CubeFaceName::Top, 0);
-    LeftconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->leftCvEquirect, hmdPtr->LeftcubeBottom, CubeFaceName::Bottom, 0);
 
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeFront, CubeFaceName::Front, 1);
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBack, CubeFaceName::Back, 1);
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeLeft, CubeFaceName::Left, 1);
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeRight, CubeFaceName::Right, 1);
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeTop, CubeFaceName::Top, 1);
-    RightconversionSuccess &= hmdPtr->createCubeMapFace(hmdPtr->rightCvEquirect, hmdPtr->RightcubeBottom, CubeFaceName::Bottom, 1);
+    // start = clock();
+    
+    std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
+    std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
+    // std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
+    // std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
+    // std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
+    // std::cout << "cubeheight : " << hmdPtr->LeftcubeBack.rows << std::endl;
+    // createcubemapface 0.016초 소요
+    //cube_threads.clear();
+    
+    left_cube.join();
+    right_cube.join();
 
-    
-    //cv::imshow("RIGHT front", hmdPtr->RightcubeBack);
-    //cv::imshow("Front Image", hmdPtr->LeftcubeBack);
+   
     
     
-    end = clock();
+    
     //cout << (double)(end - start) / CLOCKS_PER_SEC << endl;
-    cv::flip(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, 1);
-    cv::cvtColor(hmdPtr->LeftcubeFront, hmdPtr->LeftcubeFront, CV_BGR2RGBA);
     
-    cv::flip(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, 1);
-    cv::cvtColor(hmdPtr->LeftcubeBack, hmdPtr->LeftcubeBack, CV_BGR2RGBA);
-    cv::flip(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, 1);
-    cv::rotate(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, cv::ROTATE_90_COUNTERCLOCKWISE);
-    cv::cvtColor(hmdPtr->LeftcubeTop, hmdPtr->LeftcubeTop, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, 0);
-    cv::rotate(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, cv::ROTATE_90_COUNTERCLOCKWISE);
-
-    cv::cvtColor(hmdPtr->LeftcubeBottom, hmdPtr->LeftcubeBottom, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, 1);
-    cv::cvtColor(hmdPtr->LeftcubeLeft, hmdPtr->LeftcubeLeft, CV_BGR2RGBA);
-    
-    cv::flip(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, 1);
-    cv::cvtColor(hmdPtr->LeftcubeRight, hmdPtr->LeftcubeRight, CV_BGR2RGBA);
+    //cv::flip등의 처리 0.007초 소요//
 
 
+
+//// left
+
+//////
 
 
     //cv::resize(hmdPtr->leftCvEquirect, hmdPtr->leftCvEquirect, cv::Size(640, 480), 0, 0, CV_INTER_NN);
@@ -245,13 +409,22 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     cv::imshow("RIGHT Top face", hmdPtr->RightcubeTop);
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
     //cv::imshow("rviz", hmdPtr->RvizScreen);
+    end = clock();
+    double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    // std::cout << "time : " << time << std::endl;
+    // std::cout << "fps : " << (double)1/time << std::endl;
+    // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
+    // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
+    //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
     hmdPtr->first_data = false;
     hmdPtr->is_stream_process_finished = true;
 }
+
+
 void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ricohRos* streamPtr, HMD* hmdPtr) 
 {
-    if (hmdPtr->is_stream_process_finished)
+    if (hmdPtr->is_stream_process_finished && hmdPtr->is_stream_process_finished_l && hmdPtr->is_stream_process_finished_r )
     {
         if (hmdPtr->process_stream_thread.joinable())
         {
@@ -264,7 +437,7 @@ void streamCallback(const std_msgs::UInt8MultiArray::ConstPtr& streamPacket, ric
     }
     else
     {
-        ROS_WARN("stream data is not processed yet");
+        // ROS_WARN("st ream data is not processed yet");
     }
 }
 void streamCallbackRviz(const sensor_msgs::ImageConstPtr& rvizImg, HMD* hmdPtr)
@@ -478,7 +651,7 @@ bool HMD::CreateAllShaders()
 bool HMD::SetupTexturemaps()
 {
     std::string sExecutableDirectory = Path_StripFilename(Path_GetExecutablePath());
-    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panorama.png", sExecutableDirectory);
+    std::string strFullPath = Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/panoramaa.jpg", sExecutableDirectory);
 
     std::vector<unsigned char> imageRGBA;
  
@@ -490,9 +663,11 @@ bool HMD::SetupTexturemaps()
         return false;
     }
     //std::cout << imageRGBA.size() << std::endl; 
-    for (int i = 0; i < 7; i++) {
-        glGenTextures(1, &m_Texture[i]);
-        glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
+    for (int i = 0; i < 6; i++) {
+        glGenTextures(1, &m_Texture1[i]);
+        glGenTextures(1, &m_Texture2[i]);
+        glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
+        glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
 
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, nImageWidth, nImageHeight,
@@ -551,7 +726,7 @@ void HMD::AddCubeToScene(Matrix4 mat, std::vector<float>& vertdata, int flag)
     // hmd_yaw(1, 2) = 0.0;
     // hmd_yaw(2, 2) = 1.0;
 
-    Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
+    //Matrix4 hmd_yaw(cos(yaw_angle),0.0, sin(yaw_angle),0.0,     0.0, 1.0, 0.0, 0.0,     -sin(yaw_angle),0.0, cos(yaw_angle) , 0.0,      0.0, 0.0, 0.0, 1.0 );
     // std::cout<<"Yaw angle "<<yaw_angle << std::endl;
     /*
     Vector4 A = mat * hmd_yaw * Vector4(-0.5, 0, -0.5, 1);
@@ -654,7 +829,7 @@ void HMD::SetupScene()
     }
 
     std::vector<std::vector<float>> vertdataarrays;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 6; i++) {
         std::vector<float> array;
         vertdataarrays.push_back(array);
     }
@@ -663,13 +838,13 @@ void HMD::SetupScene()
     matScale.scale(m_fScale, m_fScale, m_fScale);
     Matrix4 matTransform;
     matTransform.translate(
-        -((float)m_iSceneVolumeWidth * m_fScaleSpacing) / 2.f,
-        -((float)m_iSceneVolumeHeight * m_fScaleSpacing) / 2.f,
-        -((float)m_iSceneVolumeDepth * m_fScaleSpacing) / 2.f);
+        -((float)m_iSceneVolumeWidth * m_fScaleSpacingWidth) / 2.f,
+        -((float)m_iSceneVolumeHeight * m_fScaleSpacingHeight) / 2.f,
+        -((float)m_iSceneVolumeDepth * m_fScaleSpacingDepth) / 2.f);
 
     
     
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 6; i++) {
 
         Matrix4 mat = matScale * matTransform;
 
@@ -703,7 +878,7 @@ void HMD::SetupScene()
         GLsizei stride = sizeof(VertexDataScene);
         uintptr_t offset = 0;
 
-        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(0); //////
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (const void*)offset);
 
         offset += sizeof(Vector3);
@@ -723,7 +898,11 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix44_t mat = VRSystem->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
-
+    // for (int i =0; i<4 ; i++){
+    //     for (int j = 0; j < 4 ; j++){
+    //         std::cout << "mat.m" << i << j << " : " <<mat.m[i][j] << std::endl;
+    //     }
+    //}
     return Matrix4(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
@@ -732,7 +911,7 @@ Matrix4 HMD::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
     );
 }
 
-Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
+Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, const float eye_distance = 0.0, const float eye_angle = 0.0)
 {
     if (!VRSystem)
     {
@@ -740,6 +919,30 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
         return Matrix4();
     }
     vr::HmdMatrix34_t matEyeRight = VRSystem->GetEyeToHeadTransform(nEye);
+    std::cout <<"which eye ? : " << nEye << std::endl;
+    
+    if (nEye == vr::Eye_Right) {
+        matEyeRight.m[0][3] = eye_distance; //  눈 사이 거리//
+        matEyeRight.m[0][0] = cos(eye_angle);
+        matEyeRight.m[0][2] = sin(eye_angle);
+        matEyeRight.m[2][0] = -sin(eye_angle);    // right : +x, front: -z, top : +y
+        matEyeRight.m[2][2] = cos(eye_angle); 
+    }
+    else {
+        matEyeRight.m[0][3] = -eye_distance;
+        matEyeRight.m[0][0] = cos(eye_angle);
+        matEyeRight.m[0][2] = -sin(eye_angle);
+        matEyeRight.m[2][0] = sin(eye_angle);    // right : +x, front: -z, top : +y
+        matEyeRight.m[2][2] = cos(eye_angle);   //matEyeRight = rotation matrix
+               
+        
+    }
+
+    // for (int i =0; i<3 ; i++){
+    //     for (int j = 0; j < 4 ; j++){
+    //         std::cout << nEye <<"  matEyeRight.m" <<  i << j << " : " << matEyeRight.m[i][j] << std::endl;
+    //     }
+    //}
     Matrix4 matrixObj(
         matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
         matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
@@ -751,12 +954,74 @@ Matrix4 HMD::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
 }
 
 
+/*
+projection
+left
+mat.m00 : 0.77164
+mat.m01 : 0
+mat.m02 : -0.18781
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.709185
+mat.m12 : 0.00246117
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+
+right
+mat.m00 : 0.771024
+mat.m01 : 0
+mat.m02 : 0.187732
+mat.m03 : 0
+mat.m10 : 0
+mat.m11 : 0.708744
+mat.m12 : 0.00221074
+mat.m13 : 0
+mat.m20 : 0
+mat.m21 : 0
+mat.m22 : -1.00334
+mat.m23 : -0.100334
+
+pose
+left
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : -0.035 // 눈 사이 거리??
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+
+right
+matEyeRight.m00 : 1
+matEyeRight.m01 : 0
+matEyeRight.m02 : 0
+matEyeRight.m03 : 0.035
+matEyeRight.m10 : 0
+matEyeRight.m11 : 1
+matEyeRight.m12 : 0
+matEyeRight.m13 : 0
+matEyeRight.m20 : 0
+matEyeRight.m21 : 0
+matEyeRight.m22 : 1
+matEyeRight.m23 : 0
+
+
+*/
+
 void HMD::SetupCameras()
 {
     m_mat4ProjectionLeft = GetHMDMatrixProjectionEye(vr::Eye_Left);
     m_mat4ProjectionRight = GetHMDMatrixProjectionEye(vr::Eye_Right);
-    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left);
-    m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right);
+    m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left, 0.0f);
+    m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right, 0.0f);
 }
 
 
@@ -805,6 +1070,8 @@ bool HMD::SetupStereoRenderTargets()
         return false;
     }
     VRSystem->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
+    // m_nRenderWidth = 1440;
+    // m_nRenderHeight = 1660;
 
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, leftEyeDesc);
     CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, rightEyeDesc);
@@ -831,7 +1098,7 @@ void HMD::SetupCompanionWindow()
     vVerts.push_back(VertexDataWindow(Vector2(0, 1), Vector2(0, 0)));
     vVerts.push_back(VertexDataWindow(Vector2(1, 1), Vector2(1, 0)));
 
-    GLushort vIndices[] = { 0, 1, 3,   0, 3, 2,   4, 5, 7,   4, 7, 6 };
+    GLushort vIndices[] = { 0, 1, 3,   0, 3, 2,   4, 5, 7,   4, 7, 6 }; //four triangles
     m_uiCompanionWindowIndexSize = _countof(vIndices);
 
     glGenVertexArrays(1, &m_unCompanionWindowVAO);
@@ -919,7 +1186,8 @@ void HMD::ProcessVREvent(const vr::VREvent_t& event)
 }
 
 RenderModel* HMD::FindOrLoadRenderModel(const char* pchRenderModelName)
-{
+{   
+    /// ros_warn 했는데 출력이 안됨.
     RenderModel* pRenderModel = NULL;
     for (std::vector< RenderModel* >::iterator i = m_vecRenderModels.begin(); i != m_vecRenderModels.end(); i++)
     {
@@ -1020,7 +1288,6 @@ bool HMD::HandleInput()
             }
         }
     }
-
     // Process SteamVR events
     vr::VREvent_t event;
     while (VRSystem->PollNextEvent(&event, sizeof(event)))
@@ -1092,7 +1359,8 @@ bool HMD::HandleInput()
                 std::string sRenderModelName = GetTrackedDeviceString(originInfo.trackedDeviceIndex, vr::Prop_RenderModelName_String);
                 if (sRenderModelName != m_rHand[eHand].m_sRenderModelName)
                 {
-                    m_rHand[eHand].m_pRenderModel = FindOrLoadRenderModel(sRenderModelName.c_str());
+
+                    //m_rHand[eHand].m_pRenderModel = FindOrLoadRenderModel(sRenderModelName.c_str()); 없어도 잘 돌아감.
                     m_rHand[eHand].m_sRenderModelName = sRenderModelName;
                 }
             }
@@ -1132,15 +1400,14 @@ void HMD::init() {
     VRSystem = vr::VR_Init(&eError, vr::VRApplication_Scene);
     // VRSystem->ResetSeatedZeroPose();
     std::cout<<"Init"<<std::endl;
-
     if (eError != vr::VRInitError_None)
     {
         char buf[1024];
         sprintf_s(buf, sizeof(buf), "Unable to init VR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
+        std::cout <<  "Unable to init VR runtime" << std::endl;
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VR_Init Failed", buf, NULL);
         return;
     }
-
     /* SDL based Window Creation Process Start */
 
     int nWindowPosX = 700;
@@ -1172,7 +1439,6 @@ void HMD::init() {
         printf("%s - OpenGL context could not be created! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
         return;
     }
-    
 
     glewExperimental = GL_TRUE;
     GLenum nGlewError = glewInit();
@@ -1183,7 +1449,7 @@ void HMD::init() {
         printf("%s - Error initializing GLEW! %s\n", __FUNCTION__, glewGetErrorString(nGlewError));
         return;
     }
-    glGetError(); // to clear the error caused deep in GLEW
+    glGetError(); // toG clear the error caused deep in LEW
 
     if (SDL_GL_SetSwapInterval(m_bVblank ? 1 : 0) < 0)
     {
@@ -1197,20 +1463,26 @@ void HMD::init() {
     m_strDriver = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String);
     m_strDisplay = GetTrackedDeviceString(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String);
 
-    std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
-    SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
+    // std::string strWindowTitle = "hellovr - " + m_strDriver + " " + m_strDisplay;
+    // SDL_SetWindowTitle(m_pCompanionWindow, strWindowTitle.c_str());
 
     // cube array
     m_iSceneVolumeWidth = m_iSceneVolumeInit;
     m_iSceneVolumeHeight = m_iSceneVolumeInit;
     m_iSceneVolumeDepth = m_iSceneVolumeInit;
 
-    m_fScale = 5.0f;
-    m_fScaleSpacing = 0.0f;
+    //cube size
+    m_fScale = 6.0f;
 
-    m_fNearClip = 0.1f;
-    m_fFarClip = 30.0f;
+    m_fScaleSpacing = 0;
 
+    //cube position
+    m_fScaleSpacingWidth = 0;
+    m_fScaleSpacingHeight = 0.5;
+    m_fScaleSpacingDepth = 0;
+
+    m_fNearClip = 0.5f;
+    m_fFarClip = 25.0f; 
 
     /* Window Creation Process End */
 
@@ -1220,7 +1492,7 @@ void HMD::init() {
         return;
 
     std::cout << "Start Connection Check" << std::endl;   
-    checkConnection();
+    checkConnection();                                        
     //ros::Duration(5.0).sleep();
     SetupTexturemaps();
     SetupScene();
@@ -1243,13 +1515,14 @@ void HMD::init() {
     ricoh_sub = node.subscribe<std_msgs::UInt8MultiArray>(  "/ricoh_h264_stream", 
                                                             1, 
                                                             boost::bind(streamCallback, _1, &streamObj, this));
-                                                            // ros::TransportHints().udp());
-
-    //image_transport::ImageTransport it(node);
+                                                            //ros::TransportHints().udp());
+    hmd_para_sub = node.subscribe("/tocabi/dg/vr_caliabration_param", 10, &HMD::hmd_para_callback, this);
+   
+    // //image_transport::ImageTransport it(node);
     //image_transport::Subscriber rviz_sub = it.subscribe("/rviz1/camera1/image", 2, boost::bind(streamCallbackRviz, _1, this));
-
+    std::cout<<"Before" << std::endl;
     vr::VRInput()->SetActionManifestPath(Path_MakeAbsolute("C:/Users/Dyros/Desktop/avatar/src/VR/src/hellovr_actions.json", Path_StripFilename(Path_GetExecutablePath())).c_str());
-
+    std::cout<<"After" << std::endl;
     vr::VRInput()->GetActionHandle("/actions/demo/in/HideCubes", &m_actionHideCubes);
     vr::VRInput()->GetActionHandle("/actions/demo/in/HideThisController", &m_actionHideThisController);
     vr::VRInput()->GetActionHandle("/actions/demo/in/TriggerHaptic", &m_actionTriggerHaptic);
@@ -1282,16 +1555,20 @@ void HMD::ROSTasks()
 }
 
 void HMD::RunMainLoop()
-{
+{   
     bool bQuit = false;
-
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
     //loop_tick_ = 0;
     std::thread t (&HMD::ROSTasks, this);
 
-    while (ros::ok())
+    while (ros::ok() && !bQuit)
     {
+        // if (!bQuit)
+        // {
+        //     std::cout<<"Shutdown Finished" << std::endl;
+        //     vr::VR_Shutdown();
+        // }
         bQuit = HandleInput();
         RenderFrame();
     }
@@ -1323,33 +1600,34 @@ void HMD::RunMainLoop()
 //     // ros::waitForShutdown();
 // }
 
-void HMD::RunRosLoop()
-{
-    ros::Rate rate(1000);
-    while (ros::ok())
-    {
-        rosPublish();
-        rate.sleep();
-    }
-}
+// void HMD::RunRosLoop()
+// {
+//     ros::Rate rate(1000);
+//     while (ros::ok())
+//     {
+//         rosPublish();
+//         rate.sleep();
+//     }
+// }
 
 void HMD::RenderFrame()
 {
     ros::Rate r(30);
     while (ros::ok())
     {
+        // clock_t start, end;
+        // start=clock();
         r.sleep();
         // for now as fast as possible
         
-        if (first_data)
+        if (first_data) //// 없어도 작동함//
         {
             continue;
         }
 
         render_mutex.lock();
-        for (int i = 0; i < 7; i++) {
-            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
-        
+        for (int i = 0; i < 6; i++) {
+            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
             switch (i) {
             case 0:
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeFront.cols, LeftcubeFront.rows,
@@ -1375,9 +1653,6 @@ void HMD::RenderFrame()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LeftcubeRight.cols, LeftcubeRight.rows,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, &LeftcubeRight.data[0]);
                 break;
-            case 6:
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RvizScreen.cols, RvizScreen.rows,
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RvizScreen.data[0]);
             }
             
             glGenerateMipmap(GL_TEXTURE_2D);
@@ -1394,9 +1669,58 @@ void HMD::RenderFrame()
             glBindTexture(GL_TEXTURE_2D, 0);
 
         }
+        // std::cout << "width : " << LeftcubeBack.cols << std::endl;
+        // std::cout << "width : " << LeftcubeTop.cols << std::endl;
+        // std::cout << "height : " << LeftcubeBack.rows << std::endl;
+        // std::cout << "height : " << LeftcubeTop.rows << std::endl;
+/////////////////////////////////right/////////////////
+        for (int i = 0; i < 6; i++) {
+            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
+            switch (i) {
+            case 0:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeFront.cols, RightcubeFront.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeFront.data[0]);
+                break;
+            case 1:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBack.cols, RightcubeBack.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBack.data[0]);
+                break;
+            case 2:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeTop.cols, RightcubeTop.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeTop.data[0]);
+                break;
+            case 3:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeBottom.cols, RightcubeBottom.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeBottom.data[0]);
+                break;
+            case 4:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeLeft.cols, RightcubeLeft.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeLeft.data[0]);
+                break;
+            case 5:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RightcubeRight.cols, RightcubeRight.rows,
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, &RightcubeRight.data[0]);
+                break;
+            }
+            
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+            GLfloat fLargest;
+            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+        }
+        //////////////////////////////////////////////
 
         if (VRSystem)
-        {
+        {   
             RenderControllerAxes();
             RenderStereoTargets();
             //RenderCompanionWindow();
@@ -1405,7 +1729,9 @@ void HMD::RenderFrame()
             vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
             vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
             vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
-            
+            // end = clock();
+            // double time = (double)(end - start)/ CLOCKS_PER_SEC;
+            // std::cout << "real real time : " << time << std::endl;
         }
 
         if (m_bVblank && m_bGlFinishHack)
@@ -1450,7 +1776,7 @@ void HMD::RenderFrame()
 
         render_mutex.unlock();  
     }
-    
+
 }
 
 void HMD::UpdateHMDMatrixPose()
@@ -1468,7 +1794,7 @@ void HMD::UpdateHMDMatrixPose()
         {
             m_iValidPoseCount++;
             //if(VRSystem->GetTrackedDeviceClass(nDevice) == vr::TrackedDeviceClass_HMD)
-              //  std::cout << m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking.m[2][3] << std::endl;
+                //  std::cout << m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking.m[2][3] << std::endl;
 
             m_rmat4DevicePose[nDevice] = ConvertSteamVRMatrixToMatrix4(m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
             if (m_rDevClassChar[nDevice] == 0)
@@ -1607,14 +1933,14 @@ Matrix4 HMD::GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye)
     {
         matMVP = m_mat4ProjectionRight * m_mat4eyePosRight * m_mat4HMDPose;
     }
-
+    //matMVP = m_mat4ProjectionLeft * m_mat4eyePosLeft * m_mat4HMDPose;
     return matMVP;
 }
 
 
 
 /* Render scene respect to each eye */
-void HMD::RenderScene(vr::Hmd_Eye nEye)
+void HMD::RenderScene1(vr::Hmd_Eye nEye)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -1623,12 +1949,15 @@ void HMD::RenderScene(vr::Hmd_Eye nEye)
     {
         glUseProgram(m_unSceneProgramID);
         glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
-        for (int i = 0; i < 7; i++) {
+        // 7 -> 6로 변경. 
+        ///여기 지우면 안나옴.
+        for (int i = 0; i < 6; i++) {
             glBindVertexArray(m_unSceneVAO[i]);
-            glBindTexture(GL_TEXTURE_2D, m_Texture[i]);
+            glBindTexture(GL_TEXTURE_2D, m_Texture1[i]);
             glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
             glBindVertexArray(0);
         }
+        ///
     }
 
     bool bIsInputAvailable = VRSystem->IsInputAvailable();
@@ -1646,30 +1975,85 @@ void HMD::RenderScene(vr::Hmd_Eye nEye)
     // ----- Render Model rendering -----
     glUseProgram(m_unRenderModelProgramID);
 
-    for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
-    {
-        if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
-            continue;
+    // for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
+    // {
+    //     if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
+    //         continue;
 
-        const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
-        Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
-        glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
+    //     const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
+    //     Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
+    //     glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
 
-        m_rHand[eHand].m_pRenderModel->Draw();
-    }
-
+    //     m_rHand[eHand].m_pRenderModel->Draw();
+    // }
+    // 의미 없음.
     glUseProgram(0);
 }
+
+//////////////////////////////////////right//////////
+void HMD::RenderScene2(vr::Hmd_Eye nEye)
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    
+    if (m_bShowCubes)
+    {
+        glUseProgram(m_unSceneProgramID);
+        glUniformMatrix4fv(m_nSceneMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+        
+        ///여기 지우면 안나옴.
+        for (int i = 0; i < 6; i++) {
+            glBindVertexArray(m_unSceneVAO[i]);
+            glBindTexture(GL_TEXTURE_2D, m_Texture2[i]);
+            glDrawArrays(GL_TRIANGLES, 0, m_uiVertcount[i]);
+            glBindVertexArray(0);
+        }
+        ///
+    }
+
+    bool bIsInputAvailable = VRSystem->IsInputAvailable();
+
+    if (bIsInputAvailable)
+    {
+        // draw the controller axis lines
+        glUseProgram(m_unControllerTransformProgramID);
+        glUniformMatrix4fv(m_nControllerMatrixLocation, 1, GL_FALSE, GetCurrentViewProjectionMatrix(nEye).get());
+        glBindVertexArray(m_unControllerVAO);
+        glDrawArrays(GL_LINES, 0, m_uiControllerVertcount);
+        glBindVertexArray(0);
+    }
+
+    // ----- Render Model rendering -----
+    glUseProgram(m_unRenderModelProgramID);
+
+    // for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
+    // {
+    //     if (!m_rHand[eHand].m_bShowController || !m_rHand[eHand].m_pRenderModel)
+    //         continue;
+
+    //     const Matrix4& matDeviceToTracking = m_rHand[eHand].m_rmat4Pose;
+    //     Matrix4 matMVP = GetCurrentViewProjectionMatrix(nEye) * matDeviceToTracking;
+    //     glUniformMatrix4fv(m_nRenderModelMatrixLocation, 1, GL_FALSE, matMVP.get());
+
+    //     m_rHand[eHand].m_pRenderModel->Draw();
+    // }
+    //의미 없음.
+    glUseProgram(0);
+}
+/////////////////////////////////////////////////
+
+
 
 void HMD::RenderStereoTargets()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glEnable(GL_MULTISAMPLE);
 
+    glEnable(GL_MULTISAMPLE);
+    
     // Left Eye
     glBindFramebuffer(GL_FRAMEBUFFER, leftEyeDesc.m_nRenderFramebufferId);
     glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
-    RenderScene(vr::Eye_Left);
+    RenderScene1(vr::Eye_Left);   //없으면 왼쪽눈 render 안됨//
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glDisable(GL_MULTISAMPLE);
@@ -1684,12 +2068,14 @@ void HMD::RenderStereoTargets()
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
+
+
     glEnable(GL_MULTISAMPLE);
 
     // Right Eye
     glBindFramebuffer(GL_FRAMEBUFFER, rightEyeDesc.m_nRenderFramebufferId);
     glViewport(0, 0, m_nRenderWidth, m_nRenderHeight);
-    RenderScene(vr::Eye_Right);
+    RenderScene2(vr::Eye_Right);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glDisable(GL_MULTISAMPLE);
@@ -1760,11 +2146,11 @@ int HMD::faceNameToInteger(CubeFaceName faceName) {
     }
 }
 
-bool HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo) {
+void HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo) {
     // we have to enforce input image dimensions to be equirectangular
     if (in.size().height != in.size().width / 2)
     {
-        return false;
+        return ;
     }
     MapCoord* MAP_COORDS;
     if(stereo == 0)   MAP_COORDS = &LEFT_MAP_COORDS[0];
@@ -1884,9 +2270,9 @@ bool HMD::createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceN
     }
 
     // run actual resampling using OpenCV's remap
-    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], CV_INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+    cv::remap(in, face, MAP_COORDS[index].mapx[0], MAP_COORDS[index].mapy[0], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
-    return true;
+    return ;
 }
 
 

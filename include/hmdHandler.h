@@ -2,11 +2,12 @@
 #include "std_msgs/Bool.h"
 #include <mutex>
 #include <thread>
-
+#include <vector>
+#include <std_msgs/Float32MultiArray.h>
+#include <cmath>
 
 #ifndef hmdHandler_h
 #define hmdHandler_h
-
 
 // Initiate VR system as a VRApplication_Scene mode
 // VRApplication_Scene mode : A 3D Application that will draw an environment.
@@ -69,9 +70,6 @@ static const Face facesTable[6] = {
 
 
 
-
-
-
 class HMD {
 
 public: 
@@ -87,7 +85,7 @@ public:
 /* HMD, Controllers members */
 public:
 	void rosPublish();
-
+	void hmd_para_callback(const std_msgs::Float32MultiArray data);
 
 public:
 	int argc_arg;
@@ -95,14 +93,15 @@ public:
 
 	
 	bool checkControllers = false;
-	bool checkTrackers = false;
+	bool checkTrackers = true;
 	bool allTrackersFine = true;
 	std_msgs::Bool allTrackersFineData;
 	static const uint32_t trackerNum = 6;
 	char serialNumber[trackerNum][15];
-	bool pubPose = false;
+	bool pubPose = true;
 	int loop_tick_ = 0;
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
+	bool subCallbackFlag = false;
 
 	//vr is  right-handed system
    // +y is up
@@ -139,6 +138,7 @@ private:
 
 	ricohRos streamObj;
 	ros::Subscriber ricoh_sub;
+	ros::Subscriber hmd_para_sub;
 public:
 	int width = -1;
 	int height = -1;
@@ -150,11 +150,11 @@ public:
 	
 	std::string faceNameToString(CubeFaceName faceName);
 	int faceNameToInteger(CubeFaceName faceName);
-	bool createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo);
+	void createCubeMapFace(const cv::Mat& in, cv::Mat& face, CubeFaceName faceName, int stereo);
 	cv::Mat LeftcubeFront, LeftcubeBack, LeftcubeLeft, LeftcubeRight, LeftcubeTop, LeftcubeBottom;
 	cv::Mat RightcubeFront, RightcubeBack, RightcubeLeft, RightcubeRight, RightcubeTop, RightcubeBottom;
 
-	int targetDim = 512;
+	int targetDim = 1024;//800;  // this means hmd resolution. it is related with fps.
 	MapCoord LEFT_MAP_COORDS[CubeFaceName::NumFaces];
 	MapCoord RIGHT_MAP_COORDS[CubeFaceName::NumFaces];
 
@@ -164,13 +164,15 @@ private:
 public:
 	cv::Mat RvizScreen;
 	int Rviz_targetDim = 256;
-	
 	bool is_stream_process_finished {true};
+	bool is_stream_process_finished_l {true};
+	bool is_stream_process_finished_r {true};
 	bool first_data {true};
 	std::mutex render_mutex;
 	// std::mutex stream_packet_mutex;
 	std::shared_ptr<std_msgs::UInt8MultiArray> stored_stream_packet;
 	std::thread process_stream_thread;
+
 
 /* vr component members */
 public:
@@ -210,14 +212,16 @@ public:
 	bool SetupStereoRenderTargets();
 	void SetupCompanionWindow();
 	void SetupCameras();
-	void RenderScene(vr::Hmd_Eye nEye);
+	void RenderScene1(vr::Hmd_Eye nEye);
+	void RenderScene2(vr::Hmd_Eye nEye);
 	void RenderStereoTargets();
+
 
 	void RenderCompanionWindow();
 	
 
 	Matrix4 GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye);
-	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye);
+	Matrix4 GetHMDMatrixPoseEye(vr::Hmd_Eye nEye, float eye_distance, float eye_angle);
 	Matrix4 GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye);
 	void UpdateHMDMatrixPose();
 
@@ -278,22 +282,27 @@ public: // OpenGL book keeping
 	int m_iSceneVolumeDepth;
 
 	float m_fScaleSpacing;
+	float m_fScaleSpacingWidth;
+	float m_fScaleSpacingHeight;
+	float m_fScaleSpacingDepth;
+
 	float m_fScale;
+    float depth=0;
 
 	int m_iSceneVolumeInit;
 
 	float m_fNearClip;
 	float m_fFarClip;
 
-	GLuint m_Texture[7];
+	GLuint m_Texture1[6];
+	GLuint m_Texture2[6];
+
+	unsigned int m_uiVertcount[6];
 	
 
-	unsigned int m_uiVertcount[7];
-	
+	GLuint m_glSceneVertBuffer[6];
 
-	GLuint m_glSceneVertBuffer[7];
-
-	GLuint m_unSceneVAO[7];
+	GLuint m_unSceneVAO[6];
 
 
 
@@ -309,6 +318,8 @@ public: // OpenGL book keeping
 	Matrix4 m_mat4HMDPose;
 	Matrix4 m_mat4eyePosLeft;
 	Matrix4 m_mat4eyePosRight;
+
+    float distance, distance_cali,eye_angle, eye_angle_cali;
 
 	Matrix4 m_mat4ProjectionCenter;
 	Matrix4 m_mat4ProjectionLeft;

@@ -1,5 +1,6 @@
 #pragma once
 
+// #include "hmdHandler_sphere.h"
 #include "hmdHandler.h"
 #include <thread>
 
@@ -8,8 +9,9 @@ int main(int argc, char* argv[])
 {   
    
     HMD* hmdSystem = new HMD(argc, argv);
-    hmdSystem->init();
     
+    hmdSystem->init();
+       
     // std::thread threads[2];
     // threads[0] = std::thread(&HMD::RunMainLoop,*hmdSystem);
     // threads[1] = std::thread(&HMD::RunRosLoop,*hmdSystem);
