@@ -45,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = false;
+    checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -138,9 +138,13 @@ void createCubeMapFace_rightBottom(HMD* hmdPtr){
 
 
 
-void createCubeMapFace_left_thread(HMD* hmdPtr)
+void createCubeMapFace_left_thread(HMD* hmdPtr, ricohRos* streamPtr)
 {
-
+    sws_scale(streamPtr->ricohContext, streamPtr->ricohleftFrame->data,
+        streamPtr->ricohleftFrame->linesize, 0,
+        hmdPtr->height,
+        (hmdPtr->leftDat).data, (hmdPtr->leftDat).linesize);
+   
     //std::thread lt1(createCubeMapFace_leftFront,hmdPtr);
     std::thread lt2(createCubeMapFace_leftBack,hmdPtr);
     //std::thread lt3(createCubeMapFace_leftTop,hmdPtr);
@@ -159,8 +163,12 @@ void createCubeMapFace_left_thread(HMD* hmdPtr)
 }
 
 
-void createCubeMapFace_right_thread(HMD* hmdPtr)
+void createCubeMapFace_right_thread(HMD* hmdPtr, ricohRos* streamPtr)
 {
+    sws_scale(streamPtr->ricohContext, streamPtr->ricohrightFrame->data,
+        streamPtr->ricohrightFrame->linesize, 0,
+        hmdPtr->height,
+        (hmdPtr->rightDat).data, (hmdPtr->rightDat).linesize);
     //std::thread rt1(createCubeMapFace_rightFront,hmdPtr);
     std::thread rt2(createCubeMapFace_rightBack,hmdPtr);
     //std::thread rt3(createCubeMapFace_rightTop,hmdPtr);
@@ -237,8 +245,9 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     const auto streamPacket = hmdPtr->stored_stream_packet;
 
     
-    clock_t start, end;
+    clock_t start, end,s,e;
     start = clock();
+    s=clock();
     //::cout << streamPacket->layout.dim[4].label << std::endl;
 
 
@@ -286,9 +295,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     t1.join();
     t2.join();
     
-    // end = clock();
-    // double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time(decode) : " << time << std::endl;
+    end = clock();
+    double time = (double)(end - start)/ CLOCKS_PER_SEC;
+    std::cout << "time(decode) : " << time << std::endl;
+    start = clock();
 
     // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
     // if (right_len < 0 || !gotFrame) {
@@ -337,8 +347,18 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         return;
     }
 
+    end = clock();
+    time = (double)(end - start)/ CLOCKS_PER_SEC;
+    std::cout << "time(before context) : " << time << std::endl;
+    start = clock();
+
     streamPtr->ricohContext = sws_getContext(hmdPtr->width, hmdPtr->height, hmdPtr->left_Pixfmt, hmdPtr->width, hmdPtr->height, AV_PIX_FMT_BGR24,
         SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+    end = clock();
+    time = (double)(end - start)/ CLOCKS_PER_SEC;
+    std::cout << "time(after context) : " << time << std::endl;
+    start = clock();
 
     if (streamPtr->ricohContext == NULL) {
         fprintf(stderr, "Cannot initialize context\n");
@@ -347,24 +367,22 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
         return;
     }
 
-    sws_scale(streamPtr->ricohContext, streamPtr->ricohleftFrame->data,
-        streamPtr->ricohleftFrame->linesize, 0,
-        hmdPtr->height,
-        (hmdPtr->leftDat).data, (hmdPtr->leftDat).linesize);
 
-    sws_scale(streamPtr->ricohContext, streamPtr->ricohrightFrame->data,
-        streamPtr->ricohrightFrame->linesize, 0,
-        hmdPtr->height,
-        (hmdPtr->rightDat).data, (hmdPtr->rightDat).linesize);
+
+
 
     bool LeftconversionSuccess = true;
     bool RightconversionSuccess = true;
 
 
     // start = clock();
-    
-    std::thread left_cube(createCubeMapFace_left_thread,hmdPtr);
-    std::thread right_cube(createCubeMapFace_right_thread,hmdPtr);
+    end = clock();
+    time = (double)(end - start)/ CLOCKS_PER_SEC;
+    std::cout << "time(before cubemap) : " << time << std::endl;
+    start = clock();
+
+    std::thread left_cube(createCubeMapFace_left_thread,hmdPtr,streamPtr);
+    std::thread right_cube(createCubeMapFace_right_thread,hmdPtr,streamPtr);
     // std::cout << "eqwidth : " << hmdPtr->leftCvEquirect.cols << std::endl;
     // std::cout << "eqheight : " << hmdPtr->leftCvEquirect.rows << std::endl;
     // std::cout << "cubewidth : " << hmdPtr->LeftcubeBack.cols << std::endl;
@@ -410,15 +428,19 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     cv::imshow("RIGHT Bottom face", hmdPtr->RightcubeBottom);*/
     //cv::imshow("rviz", hmdPtr->RvizScreen);
     end = clock();
-    double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    // std::cout << "time : " << time << std::endl;
-    // std::cout << "fps : " << (double)1/time << std::endl;
+    e= clock();
+    time = (double)(end - start)/ CLOCKS_PER_SEC;
+    std::cout << "time : " << time << std::endl;
+    std::cout << "fps : " << (double)1/(e-s)*CLOCKS_PER_SEC << std::endl;
     // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
     // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
     //ROS_INFO("%f",1/(end - start));
     cv::waitKey(1);
     hmdPtr->first_data = false;
     hmdPtr->is_stream_process_finished = true;
+    av_free_packet(&(streamPtr->ricohPacket_l));
+    av_free_packet(&(streamPtr->ricohPacket_l));
+
 }
 
 

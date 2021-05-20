@@ -24,7 +24,7 @@ ricohRos::ricohRos() :ricohContext(NULL) {
 		}
 		
 		c_l->thread_count = 8;
-		c_r->thread_count = 8;
+		c_r->thread_count = 8; // it doesn't work..
 
 		ricohleftFrame = av_frame_alloc();
 		ricohrightFrame = av_frame_alloc();

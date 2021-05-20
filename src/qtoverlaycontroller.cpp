@@ -147,7 +147,7 @@ void OverlayWidget::tracker_status(const std_msgs::Bool::ConstPtr& msg)
 {
 	if (!msg->data)
 	{
-		std::string tracker_flag1 = "TRAKERS DISCONNECTED"; 
+		std::string tracker_flag1 = "TRACKERS DISCONNECTED"; 
 		ui->label_3->clear();
 		ui->label_3->setText(tracker_flag1.c_str());
 		ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
@@ -159,14 +159,14 @@ void OverlayWidget::tracker_status(const std_msgs::Bool::ConstPtr& msg)
 		// ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
 		// ui->label_3->show();
 	}
-	// else if (msg != false)
-	// {
-	// 	std::string tracker_flag1 = "TRAKERS DISCONNECTED"; 
-	// 	ui->label_3->clear();
-	// 	ui->label_3->setText(tracker_flag1.c_str());
-	// 	ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
-	// 	ui->label_3->show();
-	// }
+	else 
+	{
+		std::string tracker_flag = "TRACKERS CONNECTED";
+		ui->label_3->clear();
+		ui->label_3->setText(tracker_flag.c_str());
+		ui->label_3->setStyleSheet("QLabel { background-color : rgba(169,169,169,0%); color : red; }");
+		ui->label_3->show();
+	}
 }
 void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
 {
