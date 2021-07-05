@@ -66,7 +66,7 @@ list(REMOVE_DUPLICATES QT_FLAGS)
 
 catkin_package( ## if you dont add this, executables are not found
   INCLUDE_DIRS include
-  LIBRARIES VR
+#   LIBRARIES VR
   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters image_transport cv_bridge sensor_msgs
 )
 

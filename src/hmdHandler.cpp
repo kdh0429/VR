@@ -45,7 +45,7 @@ HMD::HMD(int arc, char* arv[])
     this->argc_arg = arc;
     this->argv_arg = arv;
     checkControllers = false;
-    checkTrackers = false;
+    checkTrackers = true;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -297,7 +297,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     
     end = clock();
     double time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time(decode) : " << time << std::endl;
+    // std::cout << "time(decode) : " << time << std::endl;
     start = clock();
 
     // int right_len = avcodec_decode_video2(streamPtr->c, streamPtr->ricohrightFrame, &gotFrame, &(streamPtr->ricohPacket_r));
@@ -349,7 +349,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     end = clock();
     time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time(before context) : " << time << std::endl;
+    // std::cout << "time(before context) : " << time << std::endl;
     start = clock();
 
     streamPtr->ricohContext = sws_getContext(hmdPtr->width, hmdPtr->height, hmdPtr->left_Pixfmt, hmdPtr->width, hmdPtr->height, AV_PIX_FMT_BGR24,
@@ -357,7 +357,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
 
     end = clock();
     time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time(after context) : " << time << std::endl;
+    // std::cout << "time(after context) : " << time << std::endl;
     start = clock();
 
     if (streamPtr->ricohContext == NULL) {
@@ -378,7 +378,7 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     // start = clock();
     end = clock();
     time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time(before cubemap) : " << time << std::endl;
+    // std::cout << "time(before cubemap) : " << time << std::endl;
     start = clock();
 
     std::thread left_cube(createCubeMapFace_left_thread,hmdPtr,streamPtr);
@@ -430,8 +430,10 @@ void streamCallbackBackground(ricohRos* streamPtr, HMD* hmdPtr)
     end = clock();
     e= clock();
     time = (double)(end - start)/ CLOCKS_PER_SEC;
-    std::cout << "time : " << time << std::endl;
-    std::cout << "fps : " << (double)1/(e-s)*CLOCKS_PER_SEC << std::endl;
+    // std::cout << "time : " << time << std::endl;
+    if (hmdPtr->loop_tick_ % 100 == 0)
+        std::cout << "fps : " << (double)1/(e-s)*CLOCKS_PER_SEC << std::endl;
+    hmdPtr->loop_tick_++;
     // std::cout << "width : " << hmdPtr->m_nRenderWidth << std::endl;
     // std::cout << "height : " << hmdPtr->m_nRenderHeight << std::endl;
     //ROS_INFO("%f",1/(end - start));

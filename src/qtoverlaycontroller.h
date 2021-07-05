@@ -108,6 +108,8 @@ public:
 	void OverlayController::MoveOverlayFront();
 	void OverlayController::MoveOverlayBack();
 	void OverlayController::ChangeOpacity(float number);
+
+	int loop_tick = 0;
 	
 
 public slots:

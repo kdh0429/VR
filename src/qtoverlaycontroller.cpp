@@ -173,7 +173,7 @@ void OverlayWidget::update_rviz(const sensor_msgs::ImageConstPtr& msg)
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
 	}
     catch (cv_bridge::Exception& e)
     {
@@ -370,7 +370,9 @@ void OverlayController::OnSceneChanged( const QList<QRectF>& )
         vr::Texture_t texture = {(void*)(uintptr_t)unTexture, vr::TextureType_OpenGL, vr::ColorSpace_Auto };
         vr::VROverlay()->SetOverlayTexture( m_ulOverlayHandle, &texture );
 	}
-	std::cout << "scene update" << std::endl;
+	if (loop_tick % 100 == 0)
+		std::cout << "scene update" << std::endl;
+	loop_tick++;
 }
 
 //-----------------------------------------------------------------------------
