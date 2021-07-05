@@ -17,7 +17,8 @@ HMD::HMD(int arc, char* arv[])
 {
     this->argc_arg = arc;
     this->argv_arg = arv;
-    checkTrackers = true;
+    checkControllers = false;
+    checkTrackers = false;
     pubPose = true;
     memset(m_rDevClassChar, 0, sizeof(m_rDevClassChar));
 
@@ -40,6 +41,47 @@ std::string GetTrackedDeviceString(vr::TrackedDeviceIndex_t unDevice, vr::Tracke
 
 }
 
+/* Returns true if the action is active and had a rising edge*/
+bool GetDigitalActionRisingEdge(vr::VRActionHandle_t action, vr::VRInputValueHandle_t* pDevicePath = nullptr)
+{
+    vr::InputDigitalActionData_t actionData;
+    vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
+    if (pDevicePath)
+    {
+        *pDevicePath = vr::k_ulInvalidInputValueHandle;
+        if (actionData.bActive)
+        {
+            vr::InputOriginInfo_t originInfo;
+            if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
+            {
+                *pDevicePath = originInfo.devicePath;
+            }
+        }
+    }
+    return actionData.bActive && actionData.bChanged && actionData.bState;
+}
+
+/* Returns true if the action is active and its state is true */
+bool GetDigitalActionState(vr::VRActionHandle_t action, vr::VRInputValueHandle_t* pDevicePath = nullptr)
+{
+    vr::InputDigitalActionData_t actionData;
+    vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
+    if (pDevicePath)
+    {
+        *pDevicePath = vr::k_ulInvalidInputValueHandle;
+        if (actionData.bActive)
+        {
+            vr::InputOriginInfo_t originInfo;
+            if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
+            {
+                *pDevicePath = originInfo.devicePath;
+            }
+        }
+    }
+    return actionData.bActive && actionData.bState;
+}
+
+
 void HMD::ProcessVREvent(const vr::VREvent_t& event)
 {
     switch (event.eventType)
@@ -55,6 +97,191 @@ void HMD::ProcessVREvent(const vr::VREvent_t& event)
     }
     break;
     }
+}
+
+RenderModel* HMD::FindOrLoadRenderModel(const char* pchRenderModelName)
+{   
+    /// ros_warn 했는데 출력이 안됨.
+    RenderModel* pRenderModel = NULL;
+    for (std::vector< RenderModel* >::iterator i = m_vecRenderModels.begin(); i != m_vecRenderModels.end(); i++)
+    {
+        if (!stricmp((*i)->GetName().c_str(), pchRenderModelName))
+        {
+            pRenderModel = *i;
+            break;
+        }
+    }
+
+    // load the model if we didn't find one
+    if (!pRenderModel)
+    {
+        vr::RenderModel_t* pModel;
+        vr::EVRRenderModelError error;
+        while (1)
+        {
+            error = vr::VRRenderModels()->LoadRenderModel_Async(pchRenderModelName, &pModel);
+            if (error != vr::VRRenderModelError_Loading)
+                break;
+
+            ThreadSleep(1);
+        }
+
+        if (error != vr::VRRenderModelError_None)
+        {
+            std::cout << "Unable to load render model" <<  pchRenderModelName << vr::VRRenderModels()->GetRenderModelErrorNameFromEnum(error) << std::endl;
+            return NULL; // move on to the next tracked device
+        }
+
+        vr::RenderModel_TextureMap_t* pTexture;
+        while (1)
+        {
+            error = vr::VRRenderModels()->LoadTexture_Async(pModel->diffuseTextureId, &pTexture);
+            if (error != vr::VRRenderModelError_Loading)
+                break;
+
+            ThreadSleep(1);
+        }
+
+        if (error != vr::VRRenderModelError_None)
+        {
+            std::cout<<"Unable to load render texture id:  " << pModel->diffuseTextureId << "for render model: " << pchRenderModelName << std::endl;
+            vr::VRRenderModels()->FreeRenderModel(pModel);
+            return NULL; // move on to the next tracked device
+        }
+
+        pRenderModel = new RenderModel(pchRenderModelName);
+        if (!pRenderModel->BInit(*pModel, *pTexture))
+        {
+            std::cout<<"Unable to create GL model from render model: " <<  pchRenderModelName << std::endl;
+            delete pRenderModel;
+            pRenderModel = NULL;
+        }
+        else
+        {
+            m_vecRenderModels.push_back(pRenderModel);
+        }
+        vr::VRRenderModels()->FreeRenderModel(pModel);
+        vr::VRRenderModels()->FreeTexture(pTexture);
+    }
+    return pRenderModel;
+}
+
+Matrix4 HMD::ConvertSteamVRMatrixToMatrix4(const vr::HmdMatrix34_t& matPose)
+{
+    Matrix4 matrixObj(
+        matPose.m[0][0], matPose.m[1][0], matPose.m[2][0], 0.0,
+        matPose.m[0][1], matPose.m[1][1], matPose.m[2][1], 0.0,
+        matPose.m[0][2], matPose.m[1][2], matPose.m[2][2], 0.0,
+        matPose.m[0][3], matPose.m[1][3], matPose.m[2][3], 1.0f
+    );
+    return matrixObj;
+}
+
+/* Event Handler */
+bool HMD::HandleInput()
+{
+    SDL_Event sdlEvent;
+    bool bRet = false;
+
+    while (SDL_PollEvent(&sdlEvent) != 0)
+    {
+        if (sdlEvent.type == SDL_QUIT)
+        {
+            bRet = true;
+        }
+        else if (sdlEvent.type == SDL_KEYDOWN)
+        {
+            if (sdlEvent.key.keysym.sym == SDLK_ESCAPE
+                || sdlEvent.key.keysym.sym == SDLK_q)
+            {
+                bRet = true;
+            }
+            if (sdlEvent.key.keysym.sym == SDLK_c)
+            {
+                m_bShowCubes = !m_bShowCubes;
+            }
+        }
+    }
+    // Process SteamVR events
+    vr::VREvent_t event;
+    while (VRSystem->PollNextEvent(&event, sizeof(event)))
+    {
+        ProcessVREvent(event);
+    }
+
+    // Process SteamVR action state
+    // UpdateActionState is called each frame to update the state of the actions themselves. The application
+    // controls which action sets are active with the provided array of VRActiveActionSet_t structs.
+    vr::VRActiveActionSet_t actionSet = { 0 };
+    actionSet.ulActionSet = m_actionsetDemo;
+    vr::VRInput()->UpdateActionState(&actionSet, sizeof(actionSet), 1);
+
+    m_bShowCubes = !GetDigitalActionState(m_actionHideCubes);
+
+    vr::VRInputValueHandle_t ulHapticDevice;
+    if (GetDigitalActionRisingEdge(m_actionTriggerHaptic, &ulHapticDevice))
+    {
+        if (ulHapticDevice == m_rHand[Left].m_source)
+        {
+            vr::VRInput()->TriggerHapticVibrationAction(m_rHand[Left].m_actionHaptic, 0, 1, 4.f, 1.0f, vr::k_ulInvalidInputValueHandle);
+        }
+        if (ulHapticDevice == m_rHand[Right].m_source)
+        {
+            vr::VRInput()->TriggerHapticVibrationAction(m_rHand[Right].m_actionHaptic, 0, 1, 4.f, 1.0f, vr::k_ulInvalidInputValueHandle);
+        }
+    }
+
+    vr::InputAnalogActionData_t analogData;
+    if (vr::VRInput()->GetAnalogActionData(m_actionAnalongInput, &analogData, sizeof(analogData), vr::k_ulInvalidInputValueHandle) == vr::VRInputError_None && analogData.bActive)
+    {
+        m_vAnalogValue[0] = analogData.x;
+        m_vAnalogValue[1] = analogData.y;
+    }
+
+    m_rHand[Left].m_bShowController = true;
+    m_rHand[Right].m_bShowController = true;
+
+    vr::VRInputValueHandle_t ulHideDevice;
+    if (GetDigitalActionState(m_actionHideThisController, &ulHideDevice))
+    {
+        if (ulHideDevice == m_rHand[Left].m_source)
+        {
+            m_rHand[Left].m_bShowController = false;
+        }
+        if (ulHideDevice == m_rHand[Right].m_source)
+        {
+            m_rHand[Right].m_bShowController = false;
+        }
+    }
+
+    for (EHand eHand = Left; eHand <= Right; ((int&)eHand)++)
+    {
+        vr::InputPoseActionData_t poseData;
+        if (vr::VRInput()->GetPoseActionDataForNextFrame(m_rHand[eHand].m_actionPose, vr::TrackingUniverseStanding, &poseData, sizeof(poseData), vr::k_ulInvalidInputValueHandle) != vr::VRInputError_None
+            || !poseData.bActive || !poseData.pose.bPoseIsValid)
+        {
+            m_rHand[eHand].m_bShowController = false;
+        }
+        else
+        {
+            m_rHand[eHand].m_rmat4Pose = ConvertSteamVRMatrixToMatrix4(poseData.pose.mDeviceToAbsoluteTracking);
+
+            vr::InputOriginInfo_t originInfo;
+            if (vr::VRInput()->GetOriginTrackedDeviceInfo(poseData.activeOrigin, &originInfo, sizeof(originInfo)) == vr::VRInputError_None
+                && originInfo.trackedDeviceIndex != vr::k_unTrackedDeviceIndexInvalid)
+            {
+                std::string sRenderModelName = GetTrackedDeviceString(originInfo.trackedDeviceIndex, vr::Prop_RenderModelName_String);
+                if (sRenderModelName != m_rHand[eHand].m_sRenderModelName)
+                {
+
+                    //m_rHand[eHand].m_pRenderModel = FindOrLoadRenderModel(sRenderModelName.c_str()); 없어도 잘 돌아감.
+                    m_rHand[eHand].m_sRenderModelName = sRenderModelName;
+                }
+            }
+        }
+    }
+
+    return bRet;
 }
 
 
@@ -76,6 +303,8 @@ void HMD::init() {
     }
     tracker_status_pub = node.advertise<std_msgs::Bool>("TRACKERSTATUS", 1000);
 
+    
+    checkConnection();                                        
 
     hmd_init_bool = true;
     // ros::waitForShutdown();
@@ -340,7 +569,7 @@ void HMD::rosPublish() {
                 for (int i=0; i<trackerNum; i++)
                 {                
                     if (std::string(serialNumber[i]) == "LHR-B979AA9E")
-                        [0].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                        tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
                     if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
                         tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
                     if (std::string(serialNumber[i]) == "LHR-7330E069")

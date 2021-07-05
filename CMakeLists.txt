@@ -76,12 +76,8 @@ add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler
 									src/lodepng.cpp
 									src/pathtools.cpp
 									src/strtools.cpp)
-# add_executable(overlay src/main_rviz.cpp src/rvizOverlay.cpp src/glad.c
-						# src/Matrices.cpp
-						# src/lodepng.cpp
-						# src/pathtools.cpp
-						# src/strtools.cpp)
 
+									
 add_executable(overlay src/main_rviz2.cpp src/qtoverlaycontroller.cpp src/qtoverlaycontroller.h)
 
 # add_executable(camera src/usbcamera.cpp)

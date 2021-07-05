@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     // threads[1].join();
 
     hmdSystem->RunMainLoop();
-    
+    //hmdSystem->ROSTasks();
 
 
     //glfwInit();
