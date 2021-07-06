@@ -310,17 +310,17 @@ void HMD::rosPublish() {
             {
                 for (int i=0; i<trackerNum; i++)
                 {                
-                    if (std::string(serialNumber[i]) == "LHR-B979AA9E")
+                    if (std::string(serialNumber[i]) == "LHR-B979AA9E" || std::string(serialNumber[i]) == "LHR-78CF9EE8")
                         tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    if (std::string(serialNumber[i]) == "LHR-3F2A7A7B")
+                    else if (std::string(serialNumber[i]) == "LHR-3F2A7A7B" || std::string(serialNumber[i]) == "LHR-5567029A")
                         tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    if (std::string(serialNumber[i]) == "LHR-7330E069")
+                    else if (std::string(serialNumber[i]) == "LHR-7330E069" || std::string(serialNumber[i]) == "LHR-D74F7D1A")
                         tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    if (std::string(serialNumber[i]) == "LHR-8C0A4142")
+                    else if (std::string(serialNumber[i]) == "LHR-8C0A4142" || std::string(serialNumber[i]) == "LHR-CA171B68")
                         tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    if (std::string(serialNumber[i]) == "LHR-3C32FE4B")
+                    else if (std::string(serialNumber[i]) == "LHR-3C32FE4B" || std::string(serialNumber[i]) == "LHR-172B3493")
                         tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    if (std::string(serialNumber[i]) == "LHR-5423DE85")
+                    else if (std::string(serialNumber[i]) == "LHR-5423DE85" || std::string(serialNumber[i]) == "LHR-88A2CD57")
                         tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
                 }
             }
