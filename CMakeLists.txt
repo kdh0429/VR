@@ -71,7 +71,13 @@ catkin_package( ## if you dont add this, executables are not found
 )
 
 
-add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler.cpp  src/glad.c 
+# add_executable(vr src/main.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler.cpp  src/glad.c 
+# 									src/Matrices.cpp
+# 									src/lodepng.cpp
+# 									src/pathtools.cpp
+# 									src/strtools.cpp)
+
+add_executable(vr src/main_noHMD.cpp src/render.cpp src/ricohStream.cpp src/hmdHandler_noHMD.cpp  src/glad.c 
 									src/Matrices.cpp
 									src/lodepng.cpp
 									src/pathtools.cpp
