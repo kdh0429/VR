@@ -48,13 +48,13 @@ void HMD::init() {
     ros::NodeHandle node;
     // ros::AsyncSpinner spinner(0);
     // spinner.start();
-    hmd_pub = node.advertise<VR::matrix_3_4>("HMD", 1000);
-    leftCon_pub = node.advertise<VR::matrix_3_4>("LEFTCONTROLLER", 1000);
-    rightCon_pub = node.advertise<VR::matrix_3_4>("RIGHTCONTROLLER", 1000);
+    hmd_pub = node.advertise<tocabi_msgs::matrix_3_4>("HMD", 1000);
+    // leftCon_pub = node.advertise<tocabi_msgs::matrix_3_4>("LEFTCONTROLLER", 1000);
+    // rightCon_pub = node.advertise<tocabi_msgs::matrix_3_4>("RIGHTCONTROLLER", 1000);
     for (int i=0; i<trackerNum; i++)
     {
         std::string topic_name = "TRACKER" + std::to_string(i);
-        tracker_pub[i] = node.advertise<VR::matrix_3_4>(topic_name, 1000);
+        tracker_pub[i] = node.advertise<tocabi_msgs::matrix_3_4>(topic_name, 1000);
     }
     tracker_status_pub = node.advertise<std_msgs::Bool>("TRACKERSTATUS", 1000);
 
@@ -138,6 +138,10 @@ void HMD::checkConnection() {
         if (checkControllers && !checkTrackers && (HMD_count == 1 && controller_count == 2)) {
             break;
         }
+        // Use trackers
+        if (!checkHMD && !checkControllers && checkTrackers && (tracker_count == trackerNum)) {
+            break;
+        }
         // Use HMD+trackers
         if (!checkControllers && checkTrackers && (HMD_count == 1 && tracker_count == trackerNum)) {
             break;
@@ -166,6 +170,65 @@ void HMD::checkConnection() {
         std::cout << "Start VR system and ROS NODE" << std::endl;
     }
 
+}
+
+
+
+void HMD::rosPublish() {
+    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
+
+    // HMD : Send only rotation parameters(euler or quarternion)
+    // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
+
+    HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    if (checkControllers) 
+    {
+        LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
+        LEFTCONTROLLER = map2array(coordinate_robot(LEFTCONTROLLER_curEig));
+        RIGHTCONTROLLER = map2array(coordinate_robot(RIGHTCONTROLLER_curEig));
+    }
+    if(checkTrackers){
+        for (int i=0; i<trackerNum; i++)
+        {
+            TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
+            HMD_TRACKER[i] = map2array(coordinate_robot(TRACKER_curEig[i]));
+        }
+    }
+    if (pubPose) {
+        hmd_pub.publish(makeTrackingmsg(map2array(coordinate_robot(HMD_curEig))));
+        if (checkControllers) {
+            leftCon_pub.publish(makeTrackingmsg(LEFTCONTROLLER));
+            rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
+        }
+        if (checkTrackers){
+            allTrackersFine = true;
+            for (int i=0; i<trackerNum; i++)
+            {
+                allTrackersFine *= m_rTrackedDevicePose[TRACKER_INDEX[i]].bPoseIsValid;
+            }
+            allTrackersFineData.data = allTrackersFine;
+            tracker_status_pub.publish(allTrackersFineData);
+            if (allTrackersFine)
+            {
+                for (int i=0; i<trackerNum; i++)
+                {                
+                    if (std::string(serialNumber[i]) == "LHR-B979AA9E" || std::string(serialNumber[i]) == "LHR-5567029A") // waist
+                        tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    else if (std::string(serialNumber[i]) == "LHR-3F2A7A7B" || std::string(serialNumber[i]) == "LHR-D74F7D1A")  // chest
+                        tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    else if (std::string(serialNumber[i]) == "LHR-7330E069" || std::string(serialNumber[i]) == "LHR-78CF9EE8") // left shoulder
+                        tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    else if (std::string(serialNumber[i]) == "LHR-8C0A4142" || std::string(serialNumber[i]) == "LHR-CA171B68") // left hand
+                        tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    else if (std::string(serialNumber[i]) == "LHR-3C32FE4B" || std::string(serialNumber[i]) == "LHR-172B3493") // right shoulder
+                        tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                    else if (std::string(serialNumber[i]) == "LHR-5423DE85" || std::string(serialNumber[i]) == "LHR-88A2CD57")  // right hand
+                        tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
+                }
+            }
+        }
+    }
 }
 
 
@@ -261,8 +324,8 @@ Mat HMD::coordinate(Mat array) {
     return   x_r * y_r * array;
 }
 
-VR::matrix_3_4 HMD::makeTrackingmsg(_FLOAT array) {
-    VR::matrix_3_4 msg;
+tocabi_msgs::matrix_3_4 HMD::makeTrackingmsg(_FLOAT array) {
+    tocabi_msgs::matrix_3_4 msg;
 
     for (int i = 0; i < 4; i++) msg.firstRow.push_back(array[0][i]);
     for (int i = 0; i < 4; i++) msg.secondRow.push_back(array[1][i]);
@@ -271,65 +334,7 @@ VR::matrix_3_4 HMD::makeTrackingmsg(_FLOAT array) {
     return msg;
 }
 
-void HMD::rosPublish() {
-    VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
-
-    // HMD : Send only rotation parameters(euler or quarternion)
-    // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
-
-    HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
-    if (checkControllers) 
-    {
-        LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-        RIGHTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[RIGHT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
-        LEFTCONTROLLER = map2array(coordinate_robot(LEFTCONTROLLER_curEig));
-        RIGHTCONTROLLER = map2array(coordinate_robot(RIGHTCONTROLLER_curEig));
-    }
-    if(checkTrackers){
-        for (int i=0; i<trackerNum; i++)
-        {
-            TRACKER_curEig[i] = map2eigen(m_rTrackedDevicePose[TRACKER_INDEX[i]].mDeviceToAbsoluteTracking.m);
-            HMD_TRACKER[i] = map2array(coordinate_robot(TRACKER_curEig[i]));
-        }
-    }
-    if (pubPose) {
-        hmd_pub.publish(makeTrackingmsg(map2array(coordinate_robot(HMD_curEig))));
-        if (checkControllers) {
-            leftCon_pub.publish(makeTrackingmsg(LEFTCONTROLLER));
-            rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
-        }
-        if (checkTrackers){
-            allTrackersFine = true;
-            for (int i=0; i<trackerNum; i++)
-            {
-                allTrackersFine *= m_rTrackedDevicePose[TRACKER_INDEX[i]].bPoseIsValid;
-            }
-            allTrackersFineData.data = allTrackersFine;
-            tracker_status_pub.publish(allTrackersFineData);
-            if (allTrackersFine)
-            {
-                for (int i=0; i<trackerNum; i++)
-                {                
-                    if (std::string(serialNumber[i]) == "LHR-B979AA9E" || std::string(serialNumber[i]) == "LHR-5567029A") // waist
-                        tracker_pub[0].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    else if (std::string(serialNumber[i]) == "LHR-3F2A7A7B" || std::string(serialNumber[i]) == "LHR-D74F7D1A")  // chest
-                        tracker_pub[1].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    else if (std::string(serialNumber[i]) == "LHR-7330E069" || std::string(serialNumber[i]) == "LHR-78CF9EE8") // left shoulder
-                        tracker_pub[2].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    else if (std::string(serialNumber[i]) == "LHR-8C0A4142" || std::string(serialNumber[i]) == "LHR-CA171B68") // left hand
-                        tracker_pub[3].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    else if (std::string(serialNumber[i]) == "LHR-3C32FE4B" || std::string(serialNumber[i]) == "LHR-172B3493") // right shoulder
-                        tracker_pub[4].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                    else if (std::string(serialNumber[i]) == "LHR-5423DE85" || std::string(serialNumber[i]) == "LHR-88A2CD57")  // right hand
-                        tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
-                }
-            }
-        }
-    }
-}
-
-
-  Vector3d HMD::rot2Euler(Matrix3f Rot)
+Vector3d HMD::rot2Euler(Matrix3f Rot)
   {
     double beta;
     Eigen::Vector3d angle;

@@ -25,7 +25,8 @@
 #include "ros/ros.h"
 #include "std_msgs/Float32.h"
 #include "std_msgs/UInt8MultiArray.h"
-#include "VR/matrix_3_4.h"
+// #include "VR/matrix_3_4.h"
+#include "tocabi_msgs/matrix_3_4.h"
 #include "ricohStream.h"
 #include <time.h>
 #include <iostream>

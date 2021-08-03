@@ -57,7 +57,7 @@ public:
 	int argc_arg;
 	char** argv_arg;
 
-	
+	bool checkHMD = false;
 	bool checkControllers = false;
 	bool checkTrackers = true;
 	bool allTrackersFine = true;
@@ -80,7 +80,7 @@ public:
 	Mat coordinate_robot(Mat array);
 	Mat coordinate(Mat array);
 	Vector3d rot2Euler(Matrix3f Rot);
-	VR::matrix_3_4 makeTrackingmsg(_FLOAT array);
+	tocabi_msgs::matrix_3_4 makeTrackingmsg(_FLOAT array);
 
 	Mat refMat, refMatInv;
 	Mat HMD_curEig;

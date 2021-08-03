@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
 	message_filters
+	tocabi_msgs
 )
 
 
@@ -21,15 +22,14 @@ find_package( OpenCV REQUIRED
   PATHS C:/Users/Dyros/cv/opencv-3.4.13/build2
   NO_DEFAULT_PATH
 )
-add_message_files(
-	FILES
-	matrix_3_4.msg
-)
+# add_message_files(
+	# FILES
+# )
 
-generate_messages(
-	DEPENDENCIES
-	std_msgs
-)
+# generate_messages(
+	# DEPENDENCIES
+	# std_msgs
+# )
 
 
 # Qt 5
@@ -67,7 +67,7 @@ list(REMOVE_DUPLICATES QT_FLAGS)
 catkin_package( ## if you dont add this, executables are not found
   INCLUDE_DIRS include
 #   LIBRARIES VR
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters image_transport cv_bridge sensor_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters image_transport cv_bridge sensor_msgs tocabi_msgs
 )
 
 
