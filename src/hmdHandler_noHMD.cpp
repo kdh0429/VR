@@ -86,15 +86,17 @@ void HMD::RunMainLoop()
 /* Check HMD, Controllers connection state */
 void HMD::checkConnection() {
     std::cout << "Maximum Number of Device that can be tracked: " << vr::k_unMaxTrackedDeviceCount << std::endl;
-    std::cout << "Number of tracker to find: " << trackerNum << std::endl;
-    std::cout << "Please Connect Your HMD and two controllers to start this program" << std::endl;
-
+    std::cout << "Number of trackers to find: " << trackerNum << std::endl;
+    std::cout << "Please Connect Your HMD and Six Trackers to Start This Program" << std::endl;
+VRSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0, m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount);
     while (true) {
         int HMD_count = 0;
         int controller_count = 0;
         int tracker_count = 0;
+        
         for (int i = 0; i < vr::k_unMaxTrackedDeviceCount; i++){
             vr::ETrackedDeviceClass trackedStatus = VRSystem->GetTrackedDeviceClass(i);
+            
             switch (int(trackedStatus)) {
             case 0:  continue;
             case vr::ETrackedDeviceClass::TrackedDeviceClass_HMD:{
@@ -116,13 +118,16 @@ void HMD::checkConnection() {
                 controller_count += 1;
                 continue;
             }
-            case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{
-                std::cout << "Tracker " << tracker_count <<" identified! Idx is " << i << std::endl;
-                vr::ETrackedControllerRole controllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(vr::TrackedDeviceIndex_t(i));
-                vr::VRSystem()->GetStringTrackedDeviceProperty(i, vr::Prop_SerialNumber_String, serialNumber[tracker_count], sizeof(serialNumber));
-                printf("Serial Number = %s \n", serialNumber[tracker_count]);
-                this->TRACKER_INDEX[tracker_count] = i;
-                tracker_count += 1;
+            case vr::ETrackedDeviceClass::TrackedDeviceClass_GenericTracker:{               
+
+                // if (m_rTrackedDevicePose[i].bPoseIsValid)
+                // {
+                    std::cout << "Tracker " << tracker_count <<" identified! Idx is " << i << std::endl;
+                    vr::VRSystem()->GetStringTrackedDeviceProperty(i, vr::Prop_SerialNumber_String, serialNumber[tracker_count], sizeof(serialNumber));
+                    printf("Serial Number = %s \n", serialNumber[tracker_count]);
+                    this->TRACKER_INDEX[tracker_count] = i;
+                    tracker_count += 1;
+                // }
                 continue;
             }
             case 4:  continue;
@@ -179,8 +184,8 @@ void HMD::rosPublish() {
 
     // HMD : Send only rotation parameters(euler or quarternion)
     // controller : Send rotation & translation parameters(w.r.t current HMD Cordinate)
-
     HMD_curEig = map2eigen(m_rTrackedDevicePose[HMD_INDEX].mDeviceToAbsoluteTracking.m);
+    
     if (checkControllers) 
     {
         LEFTCONTROLLER_curEig = map2eigen(m_rTrackedDevicePose[LEFT_CONTROLLER_INDEX].mDeviceToAbsoluteTracking.m);
@@ -197,9 +202,11 @@ void HMD::rosPublish() {
     }
     if (pubPose) {
         hmd_pub.publish(makeTrackingmsg(map2array(coordinate_robot(HMD_curEig))));
+        
         if (checkControllers) {
             leftCon_pub.publish(makeTrackingmsg(LEFTCONTROLLER));
             rightCon_pub.publish(makeTrackingmsg(RIGHTCONTROLLER));
+            allTrackersFineData.data = true; //JUST FOR HMD
         }
         if (checkTrackers){
             allTrackersFine = true;
@@ -227,6 +234,10 @@ void HMD::rosPublish() {
                         tracker_pub[5].publish(makeTrackingmsg(HMD_TRACKER[i]));
                 }
             }
+        }
+        if (!checkTrackers){
+            allTrackersFineData.data = true; //JUST FOR HMD
+            tracker_status_pub.publish(allTrackersFineData);
         }
     }
 }

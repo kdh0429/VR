@@ -19,8 +19,8 @@
 using namespace vr;
 
 vr::HmdMatrix34_t transform = {								//overlay position
-	1.0f, 0.0f, 0.0f, 0.4f,									//+: right horizontal axis
-	0.0f, 1.0f, 0.0f, 0.0f,									//+: upper axis
+	1.0f, 0.0f, 0.0f, 0.6f,									//+: right horizontal axis
+	0.0f, 1.0f, 0.0f, 0.3f,									//+: upper axis
 	0.0f, 0.0f, 1.0f, -1.0f									//-: forward axis
 };
 
@@ -315,7 +315,7 @@ bool OverlayController::Init()
 
 	if( bSuccess )
 	{
-		vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.6f );
+		vr::VROverlay()->SetOverlayWidthInMeters( m_ulOverlayHandle, 0.4f );
         vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_ulOverlayHandle, vr::k_unTrackedDeviceIndex_Hmd, &transform);
 		vr::VROverlay()->SetOverlayAlpha(m_ulOverlayHandle,0.8);
 		vr::VROverlay()->ShowOverlay(m_ulOverlayHandle);
