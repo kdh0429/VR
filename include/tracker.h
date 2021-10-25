@@ -1,5 +1,6 @@
 #include "ros/ros.h"
 #include "std_msgs/Bool.h"
+#include "geometry_msgs/Pose.h"
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -69,6 +70,10 @@ public:
 	bool pubPose = true;
 	int loop_tick_ = 0;
 	ros::Publisher hmd_pub, leftCon_pub, rightCon_pub, tracker_pub[trackerNum], tracker_status_pub;
+	ros::Publisher hmd_viz_pub, tracker_viz_pub[trackerNum];
+
+	geometry_msgs::Pose hmdVizMsg;
+	geometry_msgs::Pose trackerVizMsg[trackerNum];
 
 	//vr is  right-handed system
    // +y is up
@@ -78,6 +83,7 @@ public:
 
 	_FLOAT map2array(Mat eigen);
 	Mat map2eigen(float array[][4]);
+	geometry_msgs::Pose map2msg(Mat array);
 	Mat coordinate_z(Mat array);
 	Mat coordinate_robot(Mat array);
 	Mat coordinate(Mat array);
